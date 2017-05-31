@@ -1,0 +1,10 @@
+deployment
+/releases
+/.settings
+*.launch
+.classpath
+.project
+proxies
+*/javasource/system/actions/VerifyPassword.java
+*/javasource/system/UserActionsRegistrar.java
+src/AuditTrailModule/javasource/system/
