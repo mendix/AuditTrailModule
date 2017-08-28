@@ -241,6 +241,7 @@ public class CreateLogObject {
 		}
 		
 		if( logLineList.size() > 0 ) { 
+			Core.commit(sudoContext, logObject);
 			Core.commit(sudoContext, logLineList);
 			
 			return logLineList.size();
