@@ -178,8 +178,8 @@ public class CreateLogObject {
 
 		}
 		
-		if( createLogLines(auditableObject, logObject, sudoContext, logType, association) > 0 ) { 
-			
+		if( createLogLines(auditableObject, logObject, sudoContext, context, logType, association) > 0 ) { 
+			Core.commit(sudoContext, logObject);
 			return logObject;
 		}
 		else if( CreateLogObjectWithoutMemberChanges ) {
@@ -193,7 +193,7 @@ public class CreateLogObject {
 		}
 	}
 	
-	private static int createLogLines(IMendixObject inputObject, IMendixObject logObject, IContext sudoContext, TypeOfLog logType, String skipAssociation ) throws CoreException{
+	private static int createLogLines(IMendixObject inputObject, IMendixObject logObject, IContext sudoContext,IContext currentContext, TypeOfLog logType, String skipAssociation ) throws CoreException{
 		boolean isNew = false;
 		if( logType != TypeOfLog.Delete ) {
 			// The object is new
@@ -222,11 +222,11 @@ public class CreateLogObject {
 			line = null;
 			if (member instanceof MendixObjectReference){
 				if( !member.getName().startsWith("System.") )
-					line = createReferenceLogLine(logObject, member, isNew, sudoContext);
+					line = createReferenceLogLine(logObject, member, isNew, sudoContext, currentContext);
 			}
 			
 			else if( member instanceof MendixObjectReferenceSet)					
-				line = createReferenceSetLogLine(logObject, member, isNew, sudoContext);
+				line = createReferenceSetLogLine(logObject, member, isNew, sudoContext,currentContext);
 			
 			else{					
 				String attributeName = member.getName();
@@ -278,31 +278,31 @@ public class CreateLogObject {
 	}
 	
 	
-	private static IMendixObject createReferenceLogLine(IMendixObject logObject, IMendixObjectMember<?> member, boolean isNew, IContext context) throws CoreException {
+	private static IMendixObject createReferenceLogLine(IMendixObject logObject, IMendixObjectMember<?> member, boolean isNew, IContext sudocontext, IContext currentcontext) throws CoreException {
 		//get current and previous id
-		IMendixIdentifier cID = (IMendixIdentifier) member.getValue(context);
-		IMendixIdentifier pID = (IMendixIdentifier) member.getOriginalValue(context);							
+		IMendixIdentifier cID = (IMendixIdentifier) member.getValue(currentcontext);
+		IMendixIdentifier pID = (IMendixIdentifier) member.getOriginalValue(currentcontext);							
 		
 		// Get the values of reference objects
-		String pValue = getValueFromReference(pID, context);
-		String newValue = getValueFromReference(cID, context);
+		String pValue = getValueFromReference(pID, currentcontext);
+		String newValue = getValueFromReference(cID, currentcontext);
 		
 		if( IncludeOnlyChangedAttributes == false || !pValue.equals(newValue) || isNew ) {
-			IMendixObject logLine = Core.instantiate(context, LogLine.getType());
+			IMendixObject logLine = Core.instantiate(sudocontext, LogLine.getType());
 			
-			logLine.setValue(context, LogLine.MemberNames.Member.toString(), member.getName() );
-			logLine.setValue(context, LogLine.MemberNames.MemberType.toString(), MemberType.Reference.toString() );
-			logLine.setValue(context, LogLine.MemberNames.LogLine_Log.toString(), logObject.getId() );
-			logLine.setValue(context, LogLine.MemberNames.NewValue.toString(), newValue );
+			logLine.setValue(sudocontext, LogLine.MemberNames.Member.toString(), member.getName() );
+			logLine.setValue(sudocontext, LogLine.MemberNames.MemberType.toString(), MemberType.Reference.toString() );
+			logLine.setValue(sudocontext, LogLine.MemberNames.LogLine_Log.toString(), logObject.getId() );
+			logLine.setValue(sudocontext, LogLine.MemberNames.NewValue.toString(), newValue );
 
 			if (isNew)
-				logLine.setValue(context, LogLine.MemberNames.OldValue.toString(), "" );		
+				logLine.setValue(sudocontext, LogLine.MemberNames.OldValue.toString(), "" );		
 			else
-				logLine.setValue(context, LogLine.MemberNames.OldValue.toString(), pValue );
+				logLine.setValue(sudocontext, LogLine.MemberNames.OldValue.toString(), pValue );
 
-			if( !logLine.getValue(context, LogLine.MemberNames.OldValue.toString()).equals(logLine.getValue(context, LogLine.MemberNames.NewValue.toString())) || isNew ) {
+			if( !logLine.getValue(sudocontext, LogLine.MemberNames.OldValue.toString()).equals(logLine.getValue(sudocontext, LogLine.MemberNames.NewValue.toString())) || isNew ) {
 				_logNode.trace("Member: " + member.getName() + " has changed.");
-				logObject.setValue(context, Log.MemberNames.NumberOfChangedMembers.toString(), (Integer) logObject.getValue(context, Log.MemberNames.NumberOfChangedMembers.toString()) + 1 );
+				logObject.setValue(sudocontext, Log.MemberNames.NumberOfChangedMembers.toString(), (Integer) logObject.getValue(sudocontext, Log.MemberNames.NumberOfChangedMembers.toString()) + 1 );
 			}
 		
 			return logLine;
@@ -337,39 +337,39 @@ public class CreateLogObject {
 	
 	
 	@SuppressWarnings("unchecked")
-	private static IMendixObject createReferenceSetLogLine(IMendixObject logObject, IMendixObjectMember<?> member, boolean isNew, IContext context) throws CoreException {
+	private static IMendixObject createReferenceSetLogLine(IMendixObject logObject, IMendixObjectMember<?> member, boolean isNew, IContext sudocontext, IContext currentcontext) throws CoreException {
 		String currentValue = "", previousValue = "";
 
-		List<IMendixIdentifier> currentIDList = (List<IMendixIdentifier>) member.getValue(context);
-		List<IMendixIdentifier> previousIDList = (List<IMendixIdentifier>) member.getOriginalValue(context);
+		List<IMendixIdentifier> currentIDList = (List<IMendixIdentifier>) member.getValue(currentcontext);
+		List<IMendixIdentifier> previousIDList = (List<IMendixIdentifier>) member.getOriginalValue(currentcontext);
 		
 		if ( currentIDList != null && currentIDList.size() > 0 ) {
 			for (IMendixIdentifier id : currentIDList) {
-				currentValue += getValueFromReference(id, context);
+				currentValue += getValueFromReference(id, currentcontext);
 			}
 		}
 		
 		if ( previousIDList != null && previousIDList.size() > 0 ) {
 			for (IMendixIdentifier id : previousIDList) {
-				previousValue += getValueFromReference(id, context);
+				previousValue += getValueFromReference(id, currentcontext);
 			}
 		}
 		
 		if( IncludeOnlyChangedAttributes == false || !previousValue.equals(currentValue) || isNew ) {
-			IMendixObject logLine = Core.instantiate(context, LogLine.getType());
-			logLine.setValue(context, LogLine.MemberNames.Member.toString(), member.getName() );
-			logLine.setValue(context, LogLine.MemberNames.MemberType.toString(), MemberType.ReferenceSet.toString() );
-			logLine.setValue(context, LogLine.MemberNames.LogLine_Log.toString(), logObject.getId() );
-			logLine.setValue(context, LogLine.MemberNames.NewValue.toString(), currentValue );
+			IMendixObject logLine = Core.instantiate(sudocontext, LogLine.getType());
+			logLine.setValue(sudocontext, LogLine.MemberNames.Member.toString(), member.getName() );
+			logLine.setValue(sudocontext, LogLine.MemberNames.MemberType.toString(), MemberType.ReferenceSet.toString() );
+			logLine.setValue(sudocontext, LogLine.MemberNames.LogLine_Log.toString(), logObject.getId() );
+			logLine.setValue(sudocontext, LogLine.MemberNames.NewValue.toString(), currentValue );
 			
 			if (isNew)
-				logLine.setValue(context, LogLine.MemberNames.OldValue.toString(), "" );		
+				logLine.setValue(sudocontext, LogLine.MemberNames.OldValue.toString(), "" );		
 			else
-				logLine.setValue(context, LogLine.MemberNames.OldValue.toString(), previousValue );
+				logLine.setValue(sudocontext, LogLine.MemberNames.OldValue.toString(), previousValue );
 
-			if( !logLine.getValue(context, LogLine.MemberNames.OldValue.toString()).equals(logLine.getValue(context, LogLine.MemberNames.NewValue.toString())) || isNew ) {
+			if( !logLine.getValue(sudocontext, LogLine.MemberNames.OldValue.toString()).equals(logLine.getValue(currentcontext, LogLine.MemberNames.NewValue.toString())) || isNew ) {
 				_logNode.trace("Member: " + member.getName() + " has changed.");
-				logObject.setValue(context, Log.MemberNames.NumberOfChangedMembers.toString(), (Integer) logObject.getValue(context, Log.MemberNames.NumberOfChangedMembers.toString()) + 1 );
+				logObject.setValue(sudocontext, Log.MemberNames.NumberOfChangedMembers.toString(), (Integer) logObject.getValue(currentcontext, Log.MemberNames.NumberOfChangedMembers.toString()) + 1 );
 			}
 			
 			return logLine;
