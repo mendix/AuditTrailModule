@@ -131,9 +131,16 @@ public class CreateLogObject {
 				for( IMetaAssociation ass : imObject.getMetaAssociationsParent() ) {
 					if( Core.isSubClassOf( Log.getType(), ass.getChild().getId()) && ass.getType() == AssociationType.REFERENCESET ) {
 						association = ass.getName();
+						
+						List<IMendixIdentifier> dummyList = new ArrayList<IMendixIdentifier>();
+						
+						// Ticket 56528
+						dummyList.add(logObject.getId());
 						List<IMendixIdentifier> idList = auditableObject.getValue(sudoContext, association);
-						idList.add(logObject.getId());
-						auditableObject.setValue(sudoContext, association, idList );
+						for (IMendixIdentifier id : idList) {
+							dummyList.add(id);
+						}
+						auditableObject.setValue(sudoContext, association, dummyList );
 						
 						setAssociationName(auditableObject.getType(), association);
 						break;
