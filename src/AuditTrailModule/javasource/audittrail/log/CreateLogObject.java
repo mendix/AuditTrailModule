@@ -97,14 +97,14 @@ public class CreateLogObject {
 		
 		IContext sudoContext = Core.createSystemContext();
 		IMendixObject logObject = Core.instantiate( sudoContext, Log.getType() );;
-		IMendixObject userObject = null;
+		IMendixIdentifier userObjectId = null;
 		
 		try {
-			userObject = context.getSession().getUser().getMendixObject();
+			userObjectId = context.getSession().getUserId();
 		} catch (Exception e) {
 			try {
 				List<IMendixObject> administrators = Core.retrieveXPathQuery(sudoContext, "//" + User.getType() + "[" + User.MemberNames.Name + "='" + Core.getConfiguration().getAdminUserName() + "']");
-				userObject = administrators.get(0);
+				userObjectId = administrators.get(0).getId();
 			} catch (CoreException e1) {
 				_logNode.error("MxAdmin not found");
 			}
@@ -112,7 +112,7 @@ public class CreateLogObject {
 
 		logObject.setValue(sudoContext, Log.MemberNames.DateTime.toString(), new Date());
 		logObject.setValue(sudoContext, Log.MemberNames.LogObject.toString(), auditableObject.getType());
-		logObject.setValue(sudoContext, Log.MemberNames.Log_User.toString(), userObject.getId());
+		logObject.setValue(sudoContext, Log.MemberNames.Log_User.toString(), userObjectId);
 		logObject.setValue(sudoContext, Log.MemberNames.LogType.toString(), logType.toString());
 		logObject.setValue(sudoContext, Log.MemberNames.ReferenceId.toString(), String.valueOf(auditableObject.getId().toLong()) );
 		String association = null;
