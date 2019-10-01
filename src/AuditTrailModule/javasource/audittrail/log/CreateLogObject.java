@@ -88,10 +88,7 @@ public class CreateLogObject {
 	}
 
 	public static IMendixObject CreateAuditLogItems(IMendixObject inputObject, IContext context) throws CoreException {
-		TypeOfLog log = TypeOfLog.Change;
-		if (inputObject.isNew() || inputObject.getState() == ObjectState.INSTANTIATED
-				|| inputObject.getState() == ObjectState.AUTOCOMMITTED)
-			log = TypeOfLog.Add;
+		TypeOfLog log = inputObject.isNew() ? TypeOfLog.Add : TypeOfLog.Change;
 
 		return CreateLogObject.CreateAuditLogItems(inputObject, context, log);
 	}
@@ -217,19 +214,16 @@ public class CreateLogObject {
 	private static int createLogLines(IMendixObject inputObject, IMendixObject logObject, IContext sudoContext,
 			IContext currentContext, TypeOfLog logType, String skipAssociation) throws CoreException {
 		boolean isNew = false;
-		if (logType != TypeOfLog.Delete) {
+		if (logType != TypeOfLog.Delete && inputObject.isNew()) {
 			// The object is new
-			if (inputObject.isNew() || inputObject.getState() == ObjectState.INSTANTIATED
-					|| inputObject.getState() == ObjectState.AUTOCOMMITTED) {
-				logObject.setValue(sudoContext, Log.MemberNames.LogType.toString(), TypeOfLog.Add.toString());
+			logObject.setValue(sudoContext, Log.MemberNames.LogType.toString(), TypeOfLog.Add.toString());
 
-				/*
-				 * Set the isNew boolean to the same value as the LogAllOnCreate. This will
-				 * ensure that when a new record is created it will log the attrs according to
-				 * the setting.
-				 */
-				isNew = LogAllMembersOnCreate;
-			}
+			/*
+				* Set the isNew boolean to the same value as the LogAllOnCreate. This will
+				* ensure that when a new record is created it will log the attrs according to
+				* the setting.
+				*/
+			isNew = LogAllMembersOnCreate;
 		}
 
 		Collection<? extends IMendixObjectMember<?>> members = inputObject.getMembers(sudoContext).values();
@@ -427,7 +421,7 @@ public class CreateLogObject {
 				return parseDate((Date) value, context);
 
 			else if (value instanceof String)
-				return parseString((String) value);
+				return (String) value;
 
 			return String.valueOf(value).trim();
 		} else
@@ -456,12 +450,5 @@ public class CreateLogObject {
 		}
 
 		return dateOutput;
-	}
-
-	private static String parseString(String value) {
-		if (value == null)
-			return "";
-		else
-			return value;
 	}
 }
