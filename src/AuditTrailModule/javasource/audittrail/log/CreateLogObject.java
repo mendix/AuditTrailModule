@@ -179,11 +179,9 @@ public class CreateLogObject {
 
 		}
 		
-		if( createLogLines(auditableObject, logObject, sudoContext, context, logType, association) > 0 ) { 
-			Core.commit(sudoContext, logObject);
-			return logObject;
-		}
-		else if( CreateLogObjectWithoutMemberChanges ) {
+		if( (createLogLines(auditableObject, logObject, sudoContext, context, logType, association) > 0)
+				|| CreateLogObjectWithoutMemberChanges
+				|| logType == TypeOfLog.Delete) { 
 			Core.commit(sudoContext, logObject);
 			return logObject;
 		}
