@@ -328,7 +328,7 @@ public class CreateLogObject {
 				}
 			}
 
-			if (logLineList.size() > 1 || isNew) {
+			if (cID != pID || isNew) {
 				_logNode.trace("Member: " + member.getName() + " has changed.");
 				logObject.setValue(sudocontext, Log.MemberNames.NumberOfChangedMembers.toString(),
 						(Integer) logObject.getValue(sudocontext, Log.MemberNames.NumberOfChangedMembers.toString())
@@ -366,6 +366,7 @@ public class CreateLogObject {
 					IMendixObject referenceLogLine = Core.instantiate(sudocontext, ReferenceLogLine.getType());
 					referenceLogLine.setValue(sudocontext, ReferenceLogLine.MemberNames.Member.toString(), member.getName());
 					referenceLogLine.setValue(sudocontext, ReferenceLogLine.MemberNames.Value.toString(), getValue(member, true, currentcontext));
+					referenceLogLine.setValue(sudocontext, ReferenceLogLine.MemberNames.ReferenceLogLine_ReferenceLog.toString(), referenceLog.getId());
 					logLineList.add(referenceLogLine);
 				}
 			}
@@ -418,7 +419,7 @@ public class CreateLogObject {
 				logLineList.addAll(createLogLinesForReferencedObject(previousRef, logLine.getId(), currentcontext, sudocontext, TypeOfReferenceLog.Deleted));
 			}
 			
-			if (logLineList.size() > 1 || isNew) {
+			if (!currentIDList.isEmpty() || !previousIDList.isEmpty() || isNew) {
 				_logNode.trace("Member: " + member.getName() + " has changed.");
 				logObject.setValue(sudocontext, Log.MemberNames.NumberOfChangedMembers.toString(),
 						(Integer) logObject.getValue(currentcontext, Log.MemberNames.NumberOfChangedMembers.toString())
