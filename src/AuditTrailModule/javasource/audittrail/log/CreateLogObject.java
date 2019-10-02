@@ -356,6 +356,7 @@ public class CreateLogObject {
 			IMendixObject referenceLog = Core.instantiate(sudocontext, ReferenceLog.getType());
 			referenceLog.setValue(sudocontext, ReferenceLog.MemberNames.AttributeID.toString(), ID.toString());
 			referenceLog.setValue(sudocontext, ReferenceLog.MemberNames.Operation.toString(), typeOfReference.toString());
+			referenceLog.setValue(sudocontext, ReferenceLog.MemberNames.ReferenceLog_LogLine.toString(), parentID);
 			
 			logLineList.add(referenceLog);
 
