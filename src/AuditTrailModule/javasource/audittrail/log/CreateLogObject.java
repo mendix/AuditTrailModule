@@ -96,6 +96,15 @@ public class CreateLogObject {
 		associationMapping.put(otherObjectType, associationName);
 	}
 
+	private static void incNumberOfChangedMembers(IMendixObject logObject, IContext sudoContext,
+			IContext currentContext, boolean isNew, String memberName) {
+		if (isNew) _logNode.trace("Member: " + memberName + " was added.");
+		else _logNode.trace("Member: " + memberName + " has changed.");
+		
+		logObject.setValue(sudoContext, Log.MemberNames.NumberOfChangedMembers.toString(),
+				(Integer) logObject.getValue(currentContext, Log.MemberNames.NumberOfChangedMembers.toString()) + 1);
+	}
+
 	public static IMendixObject CreateAuditLogItems(IMendixObject inputObject, IContext context) throws CoreException {
 		TypeOfLog log = inputObject.isNew() ? TypeOfLog.Add : TypeOfLog.Change;
 
@@ -279,7 +288,9 @@ public class CreateLogObject {
 	private static List<IMendixObject> createSingleLogLine(IMendixObject logObject, IMendixObjectMember<?> member,
 			String memberType, boolean isNew, IContext context) throws CoreException {
 		String oldValue = getValue(member, false, context), newValue = getValue(member, true, context);
-		if (IncludeOnlyChangedAttributes == false || !oldValue.equals(newValue) || isNew) {
+		
+		final boolean newOrChangedObject = !oldValue.equals(newValue) || isNew;
+		if (!IncludeOnlyChangedAttributes || newOrChangedObject) {
 			IMendixObject logLine = Core.instantiate(context, LogLine.getType());
 
 			logLine.setValue(context, LogLine.MemberNames.Member.toString(), member.getName());
@@ -292,11 +303,8 @@ public class CreateLogObject {
 			else
 				logLine.setValue(context, LogLine.MemberNames.OldValue.toString(), oldValue);
 
-			if (!oldValue.equals(newValue) || isNew) {
-				_logNode.trace("Member: " + member.getName() + " has changed.");
-				logObject.setValue(context, Log.MemberNames.NumberOfChangedMembers.toString(),
-						(Integer) logObject.getValue(context, Log.MemberNames.NumberOfChangedMembers.toString()) + 1);
-			}
+			if (newOrChangedObject)
+				incNumberOfChangedMembers(logObject, context, context, isNew, member.getName());
 
 			return Collections.singletonList(logLine);
 		}
@@ -338,15 +346,12 @@ public class CreateLogObject {
 				}
 			}
 
-			if (currentId != previousId || isNew) {
-				_logNode.trace("Member: " + member.getName() + " has changed.");
-				logObject.setValue(sudocontext, Log.MemberNames.NumberOfChangedMembers.toString(),
-						(Integer) logObject.getValue(sudocontext, Log.MemberNames.NumberOfChangedMembers.toString())
-								+ 1);
-			}
+			if (newOrChangedObject)
+				incNumberOfChangedMembers(logObject, sudocontext, sudocontext, isNew, member.getName());
 
 			return logLineList;
 		}
+
 		_logNode.trace("Skipping member: " + member.getName() + " because it has not changed.");
 		return Collections.emptyList();
 	}
@@ -451,12 +456,8 @@ public class CreateLogObject {
 						TypeOfReferenceLog.Deleted));
 			}
 
-			if (!currentIdList.isEmpty() || !previousIdList.isEmpty() || isNew) {
-				_logNode.trace("Member: " + member.getName() + " has changed.");
-				logObject.setValue(sudocontext, Log.MemberNames.NumberOfChangedMembers.toString(),
-						(Integer) logObject.getValue(currentcontext, Log.MemberNames.NumberOfChangedMembers.toString())
-								+ 1);
-			}
+			if (newOrChangedObjects) // Do not increase the number of changed members if nothing changed
+				incNumberOfChangedMembers(logObject, sudocontext, currentcontext, isNew, member.getName());
 
 			return logLineList;
 		}
