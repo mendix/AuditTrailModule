@@ -244,11 +244,11 @@ public class CreateLogObject {
 
 			if (member instanceof MendixObjectReference) {
 				if (!member.getName().startsWith("System."))
-					logLineList.addAll(createReferenceLogLine(logObject, member, isNew, sudoContext, currentContext));
+					logLineList.addAll(createReferenceLogLine(logObject, (MendixObjectReference)member, isNew, sudoContext, currentContext));
 			}
 
 			else if (member instanceof MendixObjectReferenceSet)
-				logLineList.addAll(createReferenceSetLogLine(logObject, member, isNew, sudoContext, currentContext));
+				logLineList.addAll(createReferenceSetLogLine(logObject, (MendixObjectReferenceSet)member, isNew, sudoContext, currentContext));
 
 			else {
 				String attributeName = member.getName();
@@ -299,13 +299,13 @@ public class CreateLogObject {
 		return Collections.emptyList();
 	}
 
-	private static List<IMendixObject> createReferenceLogLine(IMendixObject logObject, IMendixObjectMember<?> member,
+	private static List<IMendixObject> createReferenceLogLine(IMendixObject logObject, MendixObjectReference member,
 			boolean isNew, IContext sudocontext, IContext currentcontext) throws CoreException {
 		// get current and previous id
-		IMendixIdentifier cID = (IMendixIdentifier) member.getValue(currentcontext);
-		IMendixIdentifier pID = (IMendixIdentifier) member.getOriginalValue(currentcontext);
+		IMendixIdentifier currentID = member.getValue(currentcontext);
+		IMendixIdentifier previousID = member.getOriginalValue(currentcontext);
 
-		if (IncludeOnlyChangedAttributes == false || !Objects.equals(cID, pID) || isNew) {
+		if (IncludeOnlyChangedAttributes == false || !Objects.equals(currentID, previousID) || isNew) {
 			List<IMendixObject> logLineList = new ArrayList<IMendixObject>();
 			IMendixObject logLine = Core.instantiate(sudocontext, LogLine.getType());
 
@@ -317,18 +317,18 @@ public class CreateLogObject {
 
 			logLineList.add(logLine);
 			
-			if (cID == pID && cID != null) {
-				logLineList.addAll(createLogLinesForReferencedObject(pID, logLine.getId(), currentcontext, sudocontext, TypeOfReferenceLog.No_Change));
+			if (currentID == previousID && currentID != null) {
+				logLineList.addAll(createLogLinesForReferencedObject(previousID, logLine.getId(), currentcontext, sudocontext, TypeOfReferenceLog.No_Change));
 			} else {
-				if (cID != null) {
-					logLineList.addAll(createLogLinesForReferencedObject(cID, logLine.getId(), currentcontext, sudocontext, TypeOfReferenceLog.Deleted));
+				if (currentID != null) {
+					logLineList.addAll(createLogLinesForReferencedObject(currentID, logLine.getId(), currentcontext, sudocontext, TypeOfReferenceLog.Deleted));
 				}
-				if (pID != null) {
-					logLineList.addAll(createLogLinesForReferencedObject(pID, logLine.getId(), currentcontext, sudocontext, TypeOfReferenceLog.Added));
+				if (previousID != null) {
+					logLineList.addAll(createLogLinesForReferencedObject(previousID, logLine.getId(), currentcontext, sudocontext, TypeOfReferenceLog.Added));
 				}
 			}
 
-			if (cID != pID || isNew) {
+			if (currentID != previousID || isNew) {
 				_logNode.trace("Member: " + member.getName() + " has changed.");
 				logObject.setValue(sudocontext, Log.MemberNames.NumberOfChangedMembers.toString(),
 						(Integer) logObject.getValue(sudocontext, Log.MemberNames.NumberOfChangedMembers.toString())
@@ -377,18 +377,16 @@ public class CreateLogObject {
 	
 	private static Comparator<IMendixIdentifier> IDCOMPARATOR = (IMendixIdentifier i1, IMendixIdentifier i2) -> (int)(i1.toLong() - i2.toLong());
 
-	// TODO The lists may be null. Check that.
-	@SuppressWarnings("unchecked")
-	private static List<IMendixObject> createReferenceSetLogLine(IMendixObject logObject, IMendixObjectMember<?> member,
+	private static List<IMendixObject> createReferenceSetLogLine(IMendixObject logObject, MendixObjectReferenceSet member,
 			boolean isNew, IContext sudocontext, IContext currentcontext) throws CoreException {
 
-		List<IMendixIdentifier> currentIDList = (List<IMendixIdentifier>) member.getValue(currentcontext);
-		List<IMendixIdentifier> previousIDList = (List<IMendixIdentifier>) member.getOriginalValue(currentcontext);
+		List<IMendixIdentifier> currentIDList = member.getValue(currentcontext);
+		List<IMendixIdentifier> previousIDList = member.getOriginalValue(currentcontext);
 		
 		currentIDList.sort(IDCOMPARATOR);
 		previousIDList.sort(IDCOMPARATOR);
 
-		if (IncludeOnlyChangedAttributes == false || !currentIDList.equals(previousIDList) || isNew) {
+		if (IncludeOnlyChangedAttributes == false || !Objects.equals(currentIDList, previousIDList) || isNew) {
 
 			// The size below is just a good guess
 			List<IMendixObject> logLineList = new ArrayList<IMendixObject>(currentIDList.size() + 1);
