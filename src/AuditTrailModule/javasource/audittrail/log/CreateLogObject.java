@@ -5,11 +5,18 @@ import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.TimeZone;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import system.proxies.User;
 import audittrail.proxies.AudittrailSuperClass;
@@ -17,7 +24,10 @@ import audittrail.proxies.Configuration;
 import audittrail.proxies.Log;
 import audittrail.proxies.LogLine;
 import audittrail.proxies.MemberType;
+import audittrail.proxies.ReferenceLog;
+import audittrail.proxies.ReferenceLogLine;
 import audittrail.proxies.TypeOfLog;
+import audittrail.proxies.TypeOfReferenceLog;
 
 import com.mendix.core.Core;
 import com.mendix.core.CoreException;
@@ -27,7 +37,6 @@ import com.mendix.logging.ILogNode;
 import com.mendix.systemwideinterfaces.core.IContext;
 import com.mendix.systemwideinterfaces.core.IMendixIdentifier;
 import com.mendix.systemwideinterfaces.core.IMendixObject;
-import com.mendix.systemwideinterfaces.core.IMendixObject.ObjectState;
 import com.mendix.systemwideinterfaces.core.IMendixObjectMember;
 import com.mendix.systemwideinterfaces.core.meta.IMetaAssociation;
 import com.mendix.systemwideinterfaces.core.meta.IMetaAssociation.AssociationOwner;
@@ -38,90 +47,96 @@ public class CreateLogObject {
 	private static HashMap<String, String> associationMapping = new LinkedHashMap<String, String>();
 	private static boolean isInitialized = false;
 
-	private static Boolean CreateLogObjectWithoutMemberChanges = null;
-	private static Boolean IncludeCalculatedAttributes = null;
-	private static Boolean LogAllMembersOnCreate = null;
-	private static Boolean IncludeOnlyChangedAttributes = null;
-	private static Boolean LogServerTimeZoneDateNotation = null;
-	private static Boolean LogSessionTimeZoneDateNotation = null;
-	private static String ServerTimeZone = null;
-	private static String LogLineDateFormat = null;
-	private static ILogNode _logNode = Core.getLogger("AuditTrail");
+	private static Boolean createLogObjectWithoutMemberChanges = null;
+	private static Boolean includeCalculatedAttributes = null;
+	private static Boolean logAllMembersOnCreate = null;
+	private static Boolean includeOnlyChangedAttributes = null;
+	private static Boolean logServerTimeZoneDateNotation = null;
+	private static Boolean logSessionTimeZoneDateNotation = null;
+	private static String serverTimeZone = null;
+	private static String logLineDateFormat = null;
+	private static ILogNode logNode = Core.getLogger("AuditTrail");
 
-	private static synchronized void _initialize() {
+	private static synchronized void initialize() {
 		if (!isInitialized) {
-			IContext context = Core.createSystemContext();
-			IMendixObject config = Core.instantiate(context, Configuration.getType());
+			final IContext context = Core.createSystemContext();
+			final IMendixObject config = Core.instantiate(context, Configuration.getType());
 
-			CreateLogObject.CreateLogObjectWithoutMemberChanges = config.getValue(context,
+			CreateLogObject.createLogObjectWithoutMemberChanges = config.getValue(context,
 					Configuration.MemberNames.CreateLogObjectWithoutMemberChanges.toString());
-			CreateLogObject.IncludeCalculatedAttributes = config.getValue(context,
+			CreateLogObject.includeCalculatedAttributes = config.getValue(context,
 					Configuration.MemberNames.IncludeCalculatedAttributes.toString());
-			CreateLogObject.LogAllMembersOnCreate = config.getValue(context,
+			CreateLogObject.logAllMembersOnCreate = config.getValue(context,
 					Configuration.MemberNames.LogAllMembersOnCreate.toString());
-			CreateLogObject.IncludeOnlyChangedAttributes = config.getValue(context,
+			CreateLogObject.includeOnlyChangedAttributes = config.getValue(context,
 					Configuration.MemberNames.IncludeOnlyChangedAttributes.toString());
-			CreateLogObject.LogLineDateFormat = config.getValue(context,
+			CreateLogObject.logLineDateFormat = config.getValue(context,
 					Configuration.MemberNames.LogLineDateFormat.toString());
-			CreateLogObject.LogServerTimeZoneDateNotation = config.getValue(context,
+			CreateLogObject.logServerTimeZoneDateNotation = config.getValue(context,
 					Configuration.MemberNames.LogServerTimeZoneDateNotation.toString());
-			CreateLogObject.LogSessionTimeZoneDateNotation = config.getValue(context,
+			CreateLogObject.logSessionTimeZoneDateNotation = config.getValue(context,
 					Configuration.MemberNames.LogSessionTimeZoneDateNotation.toString());
-			CreateLogObject.ServerTimeZone = config.getValue(context,
+			CreateLogObject.serverTimeZone = config.getValue(context,
 					Configuration.MemberNames.ServerTimeZone.toString());
 
 			try {
 				Core.rollback(context, config);
-			} catch (CoreException e) {
+			} catch (final CoreException e) {
 			}
 
 			isInitialized = true;
 		}
 	}
 
-	private static synchronized String getAssociationName(String otherObjectType) {
+	private static synchronized String getAssociationName(final String otherObjectType) {
 		return associationMapping.get(otherObjectType);
 	}
 
-	private static synchronized void setAssociationName(String otherObjectType, String associationName) {
+	private static synchronized void setAssociationName(final String otherObjectType, final String associationName) {
 		associationMapping.put(otherObjectType, associationName);
 	}
 
-	public static IMendixObject CreateAuditLogItems(IMendixObject inputObject, IContext context) throws CoreException {
-		TypeOfLog log = TypeOfLog.Change;
-		if (inputObject.isNew() || inputObject.getState() == ObjectState.INSTANTIATED
-				|| inputObject.getState() == ObjectState.AUTOCOMMITTED)
-			log = TypeOfLog.Add;
-
-		return CreateLogObject.CreateAuditLogItems(inputObject, context, log);
+	private static void incNumberOfChangedMembers(final IMendixObject logObject, final IContext sudoContext,
+			final IContext currentContext, final boolean isNew, final String memberName) {
+		if (isNew) logNode.trace("Member: " + memberName + " was added.");
+		else logNode.trace("Member: " + memberName + " has changed.");
+		
+		logObject.setValue(sudoContext, Log.MemberNames.NumberOfChangedMembers.toString(),
+				(Integer) logObject.getValue(currentContext, Log.MemberNames.NumberOfChangedMembers.toString()) + 1);
 	}
 
-	public static IMendixObject CreateAuditLogItems(IMendixObject auditableObject, IContext context, TypeOfLog logType)
+	public static IMendixObject createAuditLogItems(final IMendixObject inputObject, final IContext context) throws CoreException {
+		final TypeOfLog log = inputObject.isNew() ? TypeOfLog.Add : TypeOfLog.Change;
+
+		return CreateLogObject.createAuditLogItems(inputObject, context, log);
+	}
+
+	public static IMendixObject createAuditLogItems(final IMendixObject auditableObject, final IContext context, final TypeOfLog logType)
 			throws CoreException {
-		_initialize();
+		initialize();
 
 		if (auditableObject == null)
 			throw new CoreException(
 					"The object you are trying to audit is empty, please pass a valid as a parameter into the Java Action");
 
-		if (_logNode.isDebugEnabled())
-			_logNode.debug("Evaluating audit log for object: " + auditableObject.getType() + "("
+		if (logNode.isDebugEnabled())
+			logNode.debug("Evaluating audit log for object: " + auditableObject.getType() + "("
 					+ auditableObject.getId().toLong() + "), state: " + auditableObject.getState() + "/" + logType);
 
-		IContext sudoContext = Core.createSystemContext();
-		IMendixObject logObject = Core.instantiate(sudoContext, Log.getType());
+		final IContext sudoContext = Core.createSystemContext();
+		final IMendixObject logObject = Core.instantiate(sudoContext, Log.getType());
 		;
 		IMendixIdentifier userObjectId = null;
 
 		try {
 			userObjectId = context.getSession().getUserId();
-		} catch (Exception e) {
+		} catch (final Exception e) {
 			try {
-				List<IMendixObject> administrators = Core.retrieveXPathQuery(sudoContext, "//" + User.getType() + "["
+				final List<IMendixObject> administrators = Core.retrieveXPathQuery(sudoContext, "//" + User.getType() + "["
 						+ User.MemberNames.Name + "='" + Core.getConfiguration().getAdminUserName() + "']");
 				userObjectId = administrators.get(0).getId();
-			} catch (CoreException e1) {
-				_logNode.error("MxAdmin not found");
+			} catch (final CoreException e1) {
+				logNode.error("MxAdmin not found");
 			}
 		}
 
@@ -144,14 +159,14 @@ public class CreateLogObject {
 
 			// Try to look up parent of the association
 			if (association == null) {
-				IMetaObject imObject = Core.getMetaObject(auditableObject.getType());
-				for (IMetaAssociation ass : imObject.getMetaAssociationsParent()) {
+				final IMetaObject imObject = Core.getMetaObject(auditableObject.getType());
+				for (final IMetaAssociation ass : imObject.getMetaAssociationsParent()) {
 					if (Core.isSubClassOf(Log.getType(), ass.getChild().getId())
 							&& ass.getType() == AssociationType.REFERENCESET) {
 						association = ass.getName();
 
 						// Ticket 56528
-						MendixObjectReferenceSet logReferenceSet = (MendixObjectReferenceSet) auditableObject
+						final MendixObjectReferenceSet logReferenceSet = (MendixObjectReferenceSet) auditableObject
 								.getMember(sudoContext, association);
 						logReferenceSet.addValue(sudoContext, logObject.getId());
 
@@ -161,7 +176,7 @@ public class CreateLogObject {
 				}
 				// If not found, try to look up the child of the association
 				if (association == null) {
-					for (IMetaAssociation ass : imObject.getMetaAssociationsChild()) {
+					for (final IMetaAssociation ass : imObject.getMetaAssociationsChild()) {
 						if (Core.isSubClassOf(Log.getType(), ass.getParent().getId())
 								&& (ass.getType() == AssociationType.REFERENCESET
 										|| ass.getOwner() != AssociationOwner.BOTH)) {
@@ -187,13 +202,13 @@ public class CreateLogObject {
 					} else
 						throw new CoreException("Unable to find a reference set between " + Log.getType() + " and "
 								+ auditableObject.getType() + " (cached attempt)");
-				} catch (IllegalArgumentException e) {
-					_logNode.error(
+				} catch (final IllegalArgumentException e) {
+					logNode.error(
 							"Could not find association in audit trail super class: " + auditableObject.getType(), e);
 				}
 
 			}
-			_logNode.trace("Setting the association: " + association);
+			logNode.trace("Setting the association: " + association);
 
 			if (association == null)
 				throw new CoreException("Unable to find a reference set between " + Log.getType() + " and "
@@ -202,11 +217,11 @@ public class CreateLogObject {
 		}
 
 		if ((createLogLines(auditableObject, logObject, sudoContext, context, logType, association) > 0)
-				|| CreateLogObjectWithoutMemberChanges || logType == TypeOfLog.Delete) {
+				|| createLogObjectWithoutMemberChanges || logType == TypeOfLog.Delete) {
 			Core.commit(sudoContext, logObject);
 			return logObject;
 		} else {
-			_logNode.debug(
+			logNode.debug(
 					"No log lines created (no attributes changed), and configurition prevents empty log records to be created. Removing this tmp Log object for: "
 							+ logObject.getValue(sudoContext, Log.MemberNames.ReferenceId.toString()));
 			Core.delete(sudoContext, logObject);
@@ -214,54 +229,50 @@ public class CreateLogObject {
 		}
 	}
 
-	private static int createLogLines(IMendixObject inputObject, IMendixObject logObject, IContext sudoContext,
-			IContext currentContext, TypeOfLog logType, String skipAssociation) throws CoreException {
+	private static int createLogLines(final IMendixObject inputObject, final IMendixObject logObject, final IContext sudoContext,
+			final IContext currentContext, final TypeOfLog logType, final String skipAssociation) throws CoreException {
 		boolean isNew = false;
-		if (logType != TypeOfLog.Delete) {
+		if (logType != TypeOfLog.Delete && inputObject.isNew()) {
 			// The object is new
-			if (inputObject.isNew() || inputObject.getState() == ObjectState.INSTANTIATED
-					|| inputObject.getState() == ObjectState.AUTOCOMMITTED) {
-				logObject.setValue(sudoContext, Log.MemberNames.LogType.toString(), TypeOfLog.Add.toString());
+			logObject.setValue(sudoContext, Log.MemberNames.LogType.toString(), TypeOfLog.Add.toString());
 
-				/*
-				 * Set the isNew boolean to the same value as the LogAllOnCreate. This will
-				 * ensure that when a new record is created it will log the attrs according to
-				 * the setting.
-				 */
-				isNew = LogAllMembersOnCreate;
-			}
+			/*
+			 * Set the isNew boolean to the same value as the LogAllOnCreate. This will
+			 * ensure that when a new record is created it will log the attrs according to
+			 * the setting.
+			 */
+			isNew = logAllMembersOnCreate;
 		}
 
-		Collection<? extends IMendixObjectMember<?>> members = inputObject.getMembers(sudoContext).values();
-		List<IMendixObject> logLineList = new ArrayList<IMendixObject>(members.size());
-		IMendixObject line;
-		for (IMendixObjectMember<?> member : members) {
+		final Collection<? extends IMendixObjectMember<?>> members = inputObject.getMembers(sudoContext).values();
+		final List<IMendixObject> logLineList = new ArrayList<IMendixObject>(members.size());
+
+		for (final IMendixObjectMember<?> member : members) {
 			if (member.getName().equals(skipAssociation))
 				continue;
 
-			if (!IncludeCalculatedAttributes && member.isVirtual())
+			if (!includeCalculatedAttributes && member.isVirtual())
 				continue;
 
-			line = null;
 			if (member instanceof MendixObjectReference) {
 				if (!member.getName().startsWith("System."))
-					line = createReferenceLogLine(logObject, member, isNew, sudoContext, currentContext);
+					logLineList.addAll(createReferenceLogLine(logObject, (MendixObjectReference) member, isNew,
+							sudoContext, currentContext));
 			}
 
 			else if (member instanceof MendixObjectReferenceSet)
-				line = createReferenceSetLogLine(logObject, member, isNew, sudoContext, currentContext);
+				logLineList.addAll(createReferenceSetLogLine(logObject, (MendixObjectReferenceSet) member, isNew,
+						sudoContext, currentContext));
 
 			else {
-				String attributeName = member.getName();
+				final String attributeName = member.getName();
 
 				if (!attributeName.startsWith("System.") && !attributeName.equals("changedDate")
 						&& !attributeName.equals("createdDate")) {
-					line = createSingleLogLine(logObject, member, MemberType.Attribute.toString(), isNew, sudoContext);
+					logLineList.addAll(createSingleLogLine(logObject, member, MemberType.Attribute.toString(), isNew,
+							sudoContext));
 				}
 			}
-
-			if (line != null)
-				logLineList.add(line);
 		}
 
 		if (logLineList.size() > 0) {
@@ -274,11 +285,13 @@ public class CreateLogObject {
 		return 0;
 	}
 
-	private static IMendixObject createSingleLogLine(IMendixObject logObject, IMendixObjectMember<?> member,
-			String memberType, boolean isNew, IContext context) throws CoreException {
-		String oldValue = getValue(member, false, context), newValue = getValue(member, true, context);
-		if (IncludeOnlyChangedAttributes == false || !oldValue.equals(newValue) || isNew) {
-			IMendixObject logLine = Core.instantiate(context, LogLine.getType());
+	private static List<IMendixObject> createSingleLogLine(final IMendixObject logObject, final IMendixObjectMember<?> member,
+			final String memberType, final boolean isNew, final IContext context) throws CoreException {
+		final String oldValue = getValue(member, false, context), newValue = getValue(member, true, context);
+		
+		final boolean newOrChangedObject = !oldValue.equals(newValue) || isNew;
+		if (!includeOnlyChangedAttributes || newOrChangedObject) {
+			final IMendixObject logLine = Core.instantiate(context, LogLine.getType());
 
 			logLine.setValue(context, LogLine.MemberNames.Member.toString(), member.getName());
 			logLine.setValue(context, LogLine.MemberNames.MemberType.toString(), memberType);
@@ -290,128 +303,170 @@ public class CreateLogObject {
 			else
 				logLine.setValue(context, LogLine.MemberNames.OldValue.toString(), oldValue);
 
-			if (!oldValue.equals(newValue) || isNew) {
-				_logNode.trace("Member: " + member.getName() + " has changed.");
-				logObject.setValue(context, Log.MemberNames.NumberOfChangedMembers.toString(),
-						(Integer) logObject.getValue(context, Log.MemberNames.NumberOfChangedMembers.toString()) + 1);
-			}
+			if (newOrChangedObject)
+				incNumberOfChangedMembers(logObject, context, context, isNew, member.getName());
 
-			return logLine;
+			return Collections.singletonList(logLine);
 		}
 
-		_logNode.trace("Skipping member: " + member.getName() + " because it has not changed.");
-		return null;
+		logNode.trace("Skipping member: " + member.getName() + " because it has not changed.");
+		return Collections.emptyList();
 	}
 
-	private static IMendixObject createReferenceLogLine(IMendixObject logObject, IMendixObjectMember<?> member,
-			boolean isNew, IContext sudocontext, IContext currentcontext) throws CoreException {
+	private static List<IMendixObject> createReferenceLogLine(final IMendixObject logObject, final MendixObjectReference member,
+			final boolean isNew, final IContext sudocontext, final IContext currentcontext) throws CoreException {
 		// get current and previous id
-		IMendixIdentifier cID = (IMendixIdentifier) member.getValue(currentcontext);
-		IMendixIdentifier pID = (IMendixIdentifier) member.getOriginalValue(currentcontext);
+		final IMendixIdentifier currentId = member.getValue(currentcontext);
+		final IMendixIdentifier previousId = member.getOriginalValue(currentcontext);
 
-		// Get the values of reference objects
-		String pValue = getValueFromReference(pID, currentcontext);
-		String newValue = getValueFromReference(cID, currentcontext);
-
-		if (IncludeOnlyChangedAttributes == false || !pValue.equals(newValue) || isNew) {
-			IMendixObject logLine = Core.instantiate(sudocontext, LogLine.getType());
+		final boolean newOrChangedObject = !Objects.equals(currentId, previousId) || isNew;
+		if (!includeOnlyChangedAttributes || newOrChangedObject) {
+			final List<IMendixObject> logLineList = new ArrayList<IMendixObject>();
+			final IMendixObject logLine = Core.instantiate(sudocontext, LogLine.getType());
 
 			logLine.setValue(sudocontext, LogLine.MemberNames.Member.toString(), member.getName());
 			logLine.setValue(sudocontext, LogLine.MemberNames.MemberType.toString(), MemberType.Reference.toString());
 			logLine.setValue(sudocontext, LogLine.MemberNames.LogLine_Log.toString(), logObject.getId());
-			logLine.setValue(sudocontext, LogLine.MemberNames.NewValue.toString(), newValue);
+			logLine.setValue(sudocontext, LogLine.MemberNames.NewValue.toString(), "");
+			logLine.setValue(sudocontext, LogLine.MemberNames.OldValue.toString(), "");
 
-			if (isNew)
-				logLine.setValue(sudocontext, LogLine.MemberNames.OldValue.toString(), "");
-			else
-				logLine.setValue(sudocontext, LogLine.MemberNames.OldValue.toString(), pValue);
+			logLineList.add(logLine);
 
-			if (!logLine.getValue(sudocontext, LogLine.MemberNames.OldValue.toString())
-					.equals(logLine.getValue(sudocontext, LogLine.MemberNames.NewValue.toString())) || isNew) {
-				_logNode.trace("Member: " + member.getName() + " has changed.");
-				logObject.setValue(sudocontext, Log.MemberNames.NumberOfChangedMembers.toString(),
-						(Integer) logObject.getValue(sudocontext, Log.MemberNames.NumberOfChangedMembers.toString())
-								+ 1);
-			}
-
-			return logLine;
-		}
-		_logNode.trace("Skipping member: " + member.getName() + " because it has not changed.");
-		return null;
-	}
-
-	private static String getValueFromReference(IMendixIdentifier ID, IContext context) throws CoreException {
-		String value = "";
-
-		if (ID != null) {
-			// Get id of previous object
-			IMendixObject refObj = Core.retrieveId(context, ID);
-
-			if (refObj != null) {
-				// Get list of members with descriptive values
-				Collection<? extends IMendixObjectMember<?>> list = refObj.getMembers(context).values();
-
-				if (list.size() > 0) {
-					// loop the list
-					for (IMendixObjectMember<?> member : list) {
-						value += member.getName() + ": " + getValue(member, true, context) + "\n";
-					}
+			if (Objects.equals(currentId, previousId)) {
+				logLineList.addAll(createLogLinesForReferencedObject(previousId, logLine.getId(), currentcontext,
+						TypeOfReferenceLog.No_Change));
+			} else {
+				if (currentId != null) {
+					logLineList.addAll(createLogLinesForReferencedObject(currentId, logLine.getId(), currentcontext,
+							TypeOfReferenceLog.Added));
+				}
+				if (previousId != null) {
+					logLineList.addAll(createLogLinesForReferencedObject(previousId, logLine.getId(), currentcontext,
+							TypeOfReferenceLog.Deleted));
 				}
 			}
+
+			if (newOrChangedObject)
+				incNumberOfChangedMembers(logObject, sudocontext, sudocontext, isNew, member.getName());
+
+			return logLineList;
 		}
 
-		return value;
+		logNode.trace("Skipping member: " + member.getName() + " because it has not changed.");
+		return Collections.emptyList();
 	}
 
-	@SuppressWarnings("unchecked")
-	private static IMendixObject createReferenceSetLogLine(IMendixObject logObject, IMendixObjectMember<?> member,
-			boolean isNew, IContext sudocontext, IContext currentcontext) throws CoreException {
-		String currentValue = "", previousValue = "";
+	private static List<IMendixObject> createLogLinesForReferencedObject(final IMendixIdentifier attributeId,
+			final IMendixIdentifier parentId, final IContext currentcontext, final TypeOfReferenceLog typeOfReference)
+			throws CoreException {
+		if (attributeId == null)
+			return Collections.emptyList();
 
-		List<IMendixIdentifier> currentIDList = (List<IMendixIdentifier>) member.getValue(currentcontext);
-		List<IMendixIdentifier> previousIDList = (List<IMendixIdentifier>) member.getOriginalValue(currentcontext);
+		return Optional.ofNullable(Core.retrieveId(currentcontext, attributeId)) // Get id of object
+				.map(refObj -> createReferenceObjects(attributeId, parentId, currentcontext, typeOfReference, refObj))
+				.orElseGet(() -> Collections.emptyList());
+	}
 
-		if (currentIDList != null && currentIDList.size() > 0) {
-			for (IMendixIdentifier id : currentIDList) {
-				currentValue += getValueFromReference(id, currentcontext);
-			}
-		}
+	private static List<IMendixObject> createReferenceObjects(final IMendixIdentifier attributeId, final IMendixIdentifier parentId,
+			final IContext currentcontext, final TypeOfReferenceLog typeOfReference, final IMendixObject refObj) {
+		final IMendixObject referenceLog = createReferenceLogObj(attributeId, parentId, typeOfReference);
 
-		if (previousIDList != null && previousIDList.size() > 0) {
-			for (IMendixIdentifier id : previousIDList) {
-				previousValue += getValueFromReference(id, currentcontext);
-			}
-		}
+		final Stream<IMendixObject> referenceLineObjects = refObj.getMembers(currentcontext).values().stream()
+				.map(member -> createReferenceLineMendixObj(member, currentcontext, referenceLog.getId()));
 
-		if (IncludeOnlyChangedAttributes == false || !previousValue.equals(currentValue) || isNew) {
-			IMendixObject logLine = Core.instantiate(sudocontext, LogLine.getType());
+		return Stream.concat(Stream.of(referenceLog), referenceLineObjects).collect(Collectors.toList());
+	}
+
+	private static IMendixObject createReferenceLogObj(final IMendixIdentifier attributeId, final IMendixIdentifier parentId,
+			final TypeOfReferenceLog typeOfReference) {
+		final Map<String, Object> nameToValueReferenceLog = new HashMap<String, Object>();
+		nameToValueReferenceLog.put(ReferenceLog.MemberNames.AttributeID.toString(),
+				String.valueOf(attributeId.toLong()));
+		nameToValueReferenceLog.put(ReferenceLog.MemberNames.Operation.toString(), typeOfReference.toString());
+		nameToValueReferenceLog.put(ReferenceLog.MemberNames.ReferenceLog_LogLine.toString(), parentId);
+
+		return createMendixObject(ReferenceLog.getType(), nameToValueReferenceLog);
+	}
+
+	private static <T extends IMendixObjectMember<T>> IMendixObject createReferenceLineMendixObj(
+			final IMendixObjectMember<?> member, final IContext context, final IMendixIdentifier refLogId) {
+		final Map<String, Object> nameToValueReferenceLogLine = new HashMap<String, Object>();
+		nameToValueReferenceLogLine.put(ReferenceLogLine.MemberNames.Member.toString(), member.getName());
+		nameToValueReferenceLogLine.put(ReferenceLogLine.MemberNames.Value.toString(), getValue(member, true, context));
+		nameToValueReferenceLogLine.put(ReferenceLogLine.MemberNames.ReferenceLogLine_ReferenceLog.toString(),
+				refLogId);
+
+		return createMendixObject(ReferenceLogLine.getType(), nameToValueReferenceLogLine);
+	}
+
+	private static IMendixObject createMendixObject(final String objectType, final Map<String, Object> nameToValue) {
+		final IContext systemContext = Core.createSystemContext();
+		final IMendixObject mendixObject = Core.instantiate(systemContext, objectType);
+		nameToValue.forEach((name, value) -> mendixObject.setValue(systemContext, name, value));
+
+		return mendixObject;
+	}
+
+	private static Comparator<IMendixIdentifier> IDCOMPARATOR = (final IMendixIdentifier i1,
+			final IMendixIdentifier i2) -> (int) (i1.toLong() - i2.toLong());
+
+	private static List<IMendixObject> createReferenceSetLogLine(final IMendixObject logObject,
+			final MendixObjectReferenceSet member, final boolean isNew, final IContext sudocontext, final IContext currentcontext)
+			throws CoreException {
+
+		final List<IMendixIdentifier> currentIdList = member.getValue(currentcontext);
+		final List<IMendixIdentifier> previousIdList = member.getOriginalValue(currentcontext);
+
+		currentIdList.sort(IDCOMPARATOR);
+		previousIdList.sort(IDCOMPARATOR);
+
+		final boolean newOrChangedObjects = !Objects.equals(currentIdList, previousIdList) || isNew;
+		if (!includeOnlyChangedAttributes || newOrChangedObjects) {
+
+			// The size below is just a good guess
+			final List<IMendixObject> logLineList = new ArrayList<IMendixObject>(currentIdList.size() + 1);
+
+			final IMendixObject logLine = Core.instantiate(sudocontext, LogLine.getType());
 			logLine.setValue(sudocontext, LogLine.MemberNames.Member.toString(), member.getName());
 			logLine.setValue(sudocontext, LogLine.MemberNames.MemberType.toString(),
 					MemberType.ReferenceSet.toString());
 			logLine.setValue(sudocontext, LogLine.MemberNames.LogLine_Log.toString(), logObject.getId());
-			logLine.setValue(sudocontext, LogLine.MemberNames.NewValue.toString(), currentValue);
+			logLine.setValue(sudocontext, LogLine.MemberNames.NewValue.toString(), "");
+			logLine.setValue(sudocontext, LogLine.MemberNames.OldValue.toString(), "");
 
-			if (isNew)
-				logLine.setValue(sudocontext, LogLine.MemberNames.OldValue.toString(), "");
-			else
-				logLine.setValue(sudocontext, LogLine.MemberNames.OldValue.toString(), previousValue);
+			logLineList.add(logLine);
 
-			if (!logLine.getValue(sudocontext, LogLine.MemberNames.OldValue.toString())
-					.equals(logLine.getValue(currentcontext, LogLine.MemberNames.NewValue.toString())) || isNew) {
-				_logNode.trace("Member: " + member.getName() + " has changed.");
-				logObject.setValue(sudocontext, Log.MemberNames.NumberOfChangedMembers.toString(),
-						(Integer) logObject.getValue(currentcontext, Log.MemberNames.NumberOfChangedMembers.toString())
-								+ 1);
+			final List<IMendixIdentifier> unchangedRefs = currentIdList.stream().filter(previousIdList::contains)
+					.collect(Collectors.toList());
+			currentIdList.removeAll(unchangedRefs); // References that were added
+			previousIdList.removeAll(unchangedRefs); // References that were removed
+
+			for (final IMendixIdentifier unchangedRef : unchangedRefs) {
+				logLineList.addAll(createLogLinesForReferencedObject(unchangedRef, logLine.getId(), currentcontext,
+						TypeOfReferenceLog.No_Change));
 			}
 
-			return logLine;
+			for (final IMendixIdentifier currentRef : currentIdList) {
+				logLineList.addAll(createLogLinesForReferencedObject(currentRef, logLine.getId(), currentcontext,
+						TypeOfReferenceLog.Added));
+			}
+
+			for (final IMendixIdentifier previousRef : previousIdList) {
+				logLineList.addAll(createLogLinesForReferencedObject(previousRef, logLine.getId(), currentcontext,
+						TypeOfReferenceLog.Deleted));
+			}
+
+			if (newOrChangedObjects) // Do not increase the number of changed members if nothing changed
+				incNumberOfChangedMembers(logObject, sudocontext, currentcontext, isNew, member.getName());
+
+			return logLineList;
 		}
 
-		_logNode.trace("Skipping member: " + member.getName() + " because it has not changed.");
-		return null;
+		logNode.trace("Skipping member: " + member.getName() + " because it has not changed.");
+		return Collections.emptyList();
 	}
 
-	private static String getValue(IMendixObjectMember<?> member, boolean fromCache, IContext context) {
+	private static String getValue(final IMendixObjectMember<?> member, final boolean fromCache, final IContext context) {
 		Object value = null;
 		// Values from cache
 		if (fromCache == true)
@@ -427,41 +482,34 @@ public class CreateLogObject {
 				return parseDate((Date) value, context);
 
 			else if (value instanceof String)
-				return parseString((String) value);
+				return (String) value;
 
 			return String.valueOf(value).trim();
 		} else
 			return "";
 	}
 
-	private static String parseDate(Date date, IContext context) {
+	private static String parseDate(final Date date, final IContext context) {
 		String dateOutput = "";
 		if (date != null) {
-			DateFormat dateFormat = new SimpleDateFormat(CreateLogObject.LogLineDateFormat);
-			if (CreateLogObject.LogServerTimeZoneDateNotation) {
-				TimeZone zone = TimeZone.getTimeZone(CreateLogObject.ServerTimeZone);
+			final DateFormat dateFormat = new SimpleDateFormat(CreateLogObject.logLineDateFormat);
+			if (CreateLogObject.logServerTimeZoneDateNotation) {
+				final TimeZone zone = TimeZone.getTimeZone(CreateLogObject.serverTimeZone);
 				dateFormat.setTimeZone(zone);
 				dateOutput = dateFormat.format(date) + " (UTC) ";
 			}
 
-			if (CreateLogObject.LogSessionTimeZoneDateNotation && context.getSession() != null
+			if (CreateLogObject.logSessionTimeZoneDateNotation && context.getSession() != null
 					&& context.getSession().getTimeZone() != null) {
 				if (!"".equals(dateOutput))
 					dateOutput += " / ";
 
-				TimeZone zone = context.getSession().getTimeZone();
+				final TimeZone zone = context.getSession().getTimeZone();
 				dateFormat.setTimeZone(zone);
 				dateOutput += dateFormat.format(date) + " (" + zone.getDisplayName() + ") ";
 			}
 		}
 
 		return dateOutput;
-	}
-
-	private static String parseString(String value) {
-		if (value == null)
-			return "";
-		else
-			return value;
 	}
 }

@@ -36,7 +36,7 @@ public class CreateLogRecordChangesBeforeDelete extends CustomJavaAction<IMendix
 	public IMendixObject executeAction() throws Exception
 	{
 		// BEGIN USER CODE
-		IMendixObject logObject = CreateLogObject.CreateAuditLogItems(this.AuditableObject, this.getContext(), TypeOfLog.Delete);
+		IMendixObject logObject = CreateLogObject.createAuditLogItems(this.AuditableObject, this.getContext(), TypeOfLog.Delete);
 		//The Java Action create auditLogLines commits the LogObject
 		
 		return logObject;

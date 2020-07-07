@@ -40,7 +40,7 @@ public class CreateLogRecordOfObject extends CustomJavaAction<IMendixObject>
 	public IMendixObject executeAction() throws Exception
 	{
 		// BEGIN USER CODE
-		IMendixObject logObject = CreateLogObject.CreateAuditLogItems( this.AuditableObject, this.getContext() );
+		IMendixObject logObject = CreateLogObject.createAuditLogItems( this.AuditableObject, this.getContext() );
 		//The Java Action create auditLogLines commits the LogObject
 		
 		return logObject;
