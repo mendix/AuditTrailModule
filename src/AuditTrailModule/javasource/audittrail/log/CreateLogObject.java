@@ -287,7 +287,7 @@ public class CreateLogObject {
 
 	private static List<IMendixObject> createSingleLogLine(final IMendixObject logObject, final IMendixObjectMember<?> member,
 			final String memberType, final boolean isNew, final IContext context) throws CoreException {
-		final String oldValue = getValue(member, false, context), newValue = getValue(member, true, context);
+		final String oldValue = getMemberValueString(member, false, context), newValue = getMemberValueString(member, true, context);
 		
 		final boolean newOrChangedObject = !oldValue.equals(newValue) || isNew;
 		if (!includeOnlyChangedAttributes || newOrChangedObject) {
@@ -371,7 +371,7 @@ public class CreateLogObject {
 			final IContext currentcontext, final TypeOfReferenceLog typeOfReference, final IMendixObject refObj) {
 		final IMendixObject referenceLog = createReferenceLogObj(attributeId, parentId, typeOfReference);
 
-		final Stream<IMendixObject> referenceLineObjects = refObj.getMembers(currentcontext).values().stream()
+		final Stream<IMendixObject> referenceLineObjects = refObj.getPrimitives(currentcontext).stream()
 				.map(member -> createReferenceLineMendixObj(member, currentcontext, referenceLog.getId()));
 
 		return Stream.concat(Stream.of(referenceLog), referenceLineObjects).collect(Collectors.toList());
@@ -392,7 +392,7 @@ public class CreateLogObject {
 			final IMendixObjectMember<?> member, final IContext context, final IMendixIdentifier refLogId) {
 		final Map<String, Object> nameToValueReferenceLogLine = new HashMap<String, Object>();
 		nameToValueReferenceLogLine.put(ReferenceLogLine.MemberNames.Member.toString(), member.getName());
-		nameToValueReferenceLogLine.put(ReferenceLogLine.MemberNames.Value.toString(), getValue(member, true, context));
+		nameToValueReferenceLogLine.put(ReferenceLogLine.MemberNames.Value.toString(), getMemberValueString(member, true, context));
 		nameToValueReferenceLogLine.put(ReferenceLogLine.MemberNames.ReferenceLogLine_ReferenceLog.toString(),
 				refLogId);
 
@@ -466,7 +466,7 @@ public class CreateLogObject {
 		return Collections.emptyList();
 	}
 
-	private static String getValue(final IMendixObjectMember<?> member, final boolean fromCache, final IContext context) {
+	private static String getMemberValueString(final IMendixObjectMember<?> member, final boolean fromCache, final IContext context) {
 		Object value = null;
 		// Values from cache
 		if (fromCache == true)
