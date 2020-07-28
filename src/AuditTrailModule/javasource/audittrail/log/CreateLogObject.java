@@ -20,7 +20,6 @@ import java.util.stream.Stream;
 
 import system.proxies.User;
 import audittrail.proxies.AudittrailSuperClass;
-import audittrail.proxies.Configuration;
 import audittrail.proxies.Log;
 import audittrail.proxies.LogLine;
 import audittrail.proxies.MemberType;
@@ -28,6 +27,7 @@ import audittrail.proxies.ReferenceLog;
 import audittrail.proxies.ReferenceLogLine;
 import audittrail.proxies.TypeOfLog;
 import audittrail.proxies.TypeOfReferenceLog;
+import audittrail.proxies.constants.Constants;
 
 import com.mendix.core.Core;
 import com.mendix.core.CoreException;
@@ -45,48 +45,7 @@ import com.mendix.systemwideinterfaces.core.meta.IMetaObject;
 
 public class CreateLogObject {
 	private static HashMap<String, String> associationMapping = new LinkedHashMap<String, String>();
-	private static boolean isInitialized = false;
-
-	private static Boolean createLogObjectWithoutMemberChanges = null;
-	private static Boolean includeCalculatedAttributes = null;
-	private static Boolean logAllMembersOnCreate = null;
-	private static Boolean includeOnlyChangedAttributes = null;
-	private static Boolean logServerTimeZoneDateNotation = null;
-	private static Boolean logSessionTimeZoneDateNotation = null;
-	private static String serverTimeZone = null;
-	private static String logLineDateFormat = null;
 	private static ILogNode logNode = Core.getLogger("AuditTrail");
-
-	private static synchronized void initialize() {
-		if (!isInitialized) {
-			final IContext context = Core.createSystemContext();
-			final IMendixObject config = Core.instantiate(context, Configuration.getType());
-
-			CreateLogObject.createLogObjectWithoutMemberChanges = config.getValue(context,
-					Configuration.MemberNames.CreateLogObjectWithoutMemberChanges.toString());
-			CreateLogObject.includeCalculatedAttributes = config.getValue(context,
-					Configuration.MemberNames.IncludeCalculatedAttributes.toString());
-			CreateLogObject.logAllMembersOnCreate = config.getValue(context,
-					Configuration.MemberNames.LogAllMembersOnCreate.toString());
-			CreateLogObject.includeOnlyChangedAttributes = config.getValue(context,
-					Configuration.MemberNames.IncludeOnlyChangedAttributes.toString());
-			CreateLogObject.logLineDateFormat = config.getValue(context,
-					Configuration.MemberNames.LogLineDateFormat.toString());
-			CreateLogObject.logServerTimeZoneDateNotation = config.getValue(context,
-					Configuration.MemberNames.LogServerTimeZoneDateNotation.toString());
-			CreateLogObject.logSessionTimeZoneDateNotation = config.getValue(context,
-					Configuration.MemberNames.LogSessionTimeZoneDateNotation.toString());
-			CreateLogObject.serverTimeZone = config.getValue(context,
-					Configuration.MemberNames.ServerTimeZone.toString());
-
-			try {
-				Core.rollback(context, config);
-			} catch (final CoreException e) {
-			}
-
-			isInitialized = true;
-		}
-	}
 
 	private static synchronized String getAssociationName(final String otherObjectType) {
 		return associationMapping.get(otherObjectType);
@@ -113,7 +72,6 @@ public class CreateLogObject {
 
 	public static IMendixObject createAuditLogItems(final IMendixObject auditableObject, final IContext context, final TypeOfLog logType)
 			throws CoreException {
-		initialize();
 
 		if (auditableObject == null)
 			throw new CoreException(
@@ -217,7 +175,7 @@ public class CreateLogObject {
 		}
 
 		if ((createLogLines(auditableObject, logObject, sudoContext, context, logType, association) > 0)
-				|| createLogObjectWithoutMemberChanges || logType == TypeOfLog.Delete) {
+				|| Constants.getCreateLogObjectWithoutMemberChanges() || logType == TypeOfLog.Delete) {
 			Core.commit(sudoContext, logObject);
 			return logObject;
 		} else {
@@ -241,7 +199,7 @@ public class CreateLogObject {
 			 * ensure that when a new record is created it will log the attrs according to
 			 * the setting.
 			 */
-			isNew = logAllMembersOnCreate;
+			isNew = Constants.getLogAllMembersOnCreate();
 		}
 
 		final Collection<? extends IMendixObjectMember<?>> members = inputObject.getMembers(sudoContext).values();
@@ -251,7 +209,7 @@ public class CreateLogObject {
 			if (member.getName().equals(skipAssociation))
 				continue;
 
-			if (!includeCalculatedAttributes && member.isVirtual())
+			if (!Constants.getIncludeCalculatedAttributes() && member.isVirtual())
 				continue;
 
 			if (member instanceof MendixObjectReference) {
@@ -290,7 +248,7 @@ public class CreateLogObject {
 		final String oldValue = getMemberValueString(member, false, context), newValue = getMemberValueString(member, true, context);
 		
 		final boolean newOrChangedObject = !oldValue.equals(newValue) || isNew;
-		if (!includeOnlyChangedAttributes || newOrChangedObject) {
+		if (!Constants.getIncludeOnlyChangedAttributes() || newOrChangedObject) {
 			final IMendixObject logLine = Core.instantiate(context, LogLine.getType());
 
 			logLine.setValue(context, LogLine.MemberNames.Member.toString(), member.getName());
@@ -320,7 +278,7 @@ public class CreateLogObject {
 		final IMendixIdentifier previousId = member.getOriginalValue(currentcontext);
 
 		final boolean newOrChangedObject = !Objects.equals(currentId, previousId) || isNew;
-		if (!includeOnlyChangedAttributes || newOrChangedObject) {
+		if (!Constants.getIncludeOnlyChangedAttributes() || newOrChangedObject) {
 			final List<IMendixObject> logLineList = new ArrayList<IMendixObject>();
 			final IMendixObject logLine = Core.instantiate(sudocontext, LogLine.getType());
 
@@ -421,7 +379,7 @@ public class CreateLogObject {
 		previousIdList.sort(IDCOMPARATOR);
 
 		final boolean newOrChangedObjects = !Objects.equals(currentIdList, previousIdList) || isNew;
-		if (!includeOnlyChangedAttributes || newOrChangedObjects) {
+		if (!Constants.getIncludeOnlyChangedAttributes() || newOrChangedObjects) {
 
 			// The size below is just a good guess
 			final List<IMendixObject> logLineList = new ArrayList<IMendixObject>(currentIdList.size() + 1);
@@ -492,14 +450,14 @@ public class CreateLogObject {
 	private static String parseDate(final Date date, final IContext context) {
 		String dateOutput = "";
 		if (date != null) {
-			final DateFormat dateFormat = new SimpleDateFormat(CreateLogObject.logLineDateFormat);
-			if (CreateLogObject.logServerTimeZoneDateNotation) {
-				final TimeZone zone = TimeZone.getTimeZone(CreateLogObject.serverTimeZone);
+			final DateFormat dateFormat = new SimpleDateFormat(Constants.getLogLineDateFormat());
+			if (Constants.getLogServerTimeZoneDateNotation()) {
+				final TimeZone zone = TimeZone.getTimeZone(Constants.getServerTimeZone());
 				dateFormat.setTimeZone(zone);
 				dateOutput = dateFormat.format(date) + " (UTC) ";
 			}
 
-			if (CreateLogObject.logSessionTimeZoneDateNotation && context.getSession() != null
+			if (Constants.getLogSessionTimeZoneDateNotation() && context.getSession() != null
 					&& context.getSession().getTimeZone() != null) {
 				if (!"".equals(dateOutput))
 					dateOutput += " / ";
