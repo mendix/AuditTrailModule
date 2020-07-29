@@ -27,7 +27,7 @@ public class ExpectedReferenceLog {
 		this.operation = operation;
 
 		this.memberValues = new HashMap<String, String>();
-		for (final IMendixObjectMember<?> obj : referencedObject.getMembers(context).values()) {
+		for (final IMendixObjectMember<?> obj : referencedObject.getPrimitives(context)) {
 			memberValues.put(obj.getName(), obj.getValue(context).toString());
 		}
 	}
