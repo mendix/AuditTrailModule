@@ -92,7 +92,9 @@ public class CreateLogObject {
 			try {
 				final List<IMendixObject> administrators = Core.retrieveXPathQuery(sudoContext, "//" + User.getType() + "["
 						+ User.MemberNames.Name + "='" + Core.getConfiguration().getAdminUserName() + "']");
-				userObjectId = administrators.get(0).getId();
+				if (administrators.size() > 0) {
+					userObjectId = administrators.get(0).getId();
+				}
 			} catch (final CoreException e1) {
 				logNode.error("MxAdmin not found");
 			}

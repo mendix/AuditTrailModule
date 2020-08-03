@@ -147,7 +147,11 @@ public class ExpectedLog {
 		else
 			builder.append(" attributes changed by  ");
 
-		builder.append(this.logUser.getName());
+		if (this.logUser == null) {
+			builder.append("[unknown]");
+		} else {
+			builder.append(this.logUser.getName());
+		}
 		builder.append(" on ");
 		// Assuming we're not using US locale for testing
 		final SimpleDateFormat dateFormatter = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss '(UTC)'");
