@@ -83,7 +83,7 @@ public class CreateLogObject {
 
 		final IContext sudoContext = Core.createSystemContext();
 		final IMendixObject logObject = Core.instantiate(sudoContext, Log.getType());
-		;
+
 		IMendixIdentifier userObjectId = null;
 
 		try {
@@ -113,7 +113,7 @@ public class CreateLogObject {
 			logObject.setValue(sudoContext, Log.MemberNames.Log_AudittrailSuperClass.toString(),
 					auditableObject.getId());
 		} else {
-			// Retrieve the custom created association to AuditbleObject, look it up when
+			// Retrieve the custom created association to AuditableObject, look it up when
 			// not found
 			association = getAssociationName(auditableObject.getType());
 

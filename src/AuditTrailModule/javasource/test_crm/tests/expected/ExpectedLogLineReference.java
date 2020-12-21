@@ -30,7 +30,7 @@ public class ExpectedLogLineReference extends ExpectedLogLine {
 	}
 
 	public ExpectedLogLineReference addLog(final TypeOfReferenceLog typeOfReferenceLog, final IMendixObject reference) {
-		this.referenceChanges.put(new Long(reference.getId().toLong()).toString(),
+		this.referenceChanges.put(Long.toString(reference.getId().toLong()),
 				new ExpectedReferenceLog(this.context, reference, typeOfReferenceLog));
 		return this;
 	}
