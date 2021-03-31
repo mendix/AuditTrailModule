@@ -1,9 +1,36 @@
+apply plugin: 'application'
 
-apply plugin: 'java'
+import org.gradle.api.internal.file.copy.CopySpecInternal
 
 sourceCompatibility = '1.8'
 [compileJava, compileTestJava]*.options*.encoding = 'UTF-8'
 
+repositories {
+    mavenCentral()
+}
+
+configurations.all {
+    transitive = false
+}
+
 dependencies {
-    testCompile fileTree('userlib')
+    // TEST_CRM
+    testImplementation group: 'org.hamcrest', name: 'hamcrest-library', version: '1.3'
+
+    // UnitTesting
+    testImplementation group: 'junit', name: 'junit', version: '4.11'
+    testImplementation group: 'commons-io', name: 'commons-io', version: '2.3'
+    testImplementation group: 'org.apache.httpcomponents', name: 'httpcore-osgi', version: '4.4.1'
+    testImplementation group: 'org.apache.httpcomponents', name: 'httpclient-osgi', version: '4.4.1'
+
+    // UnitTesting and ObjectHandling
+    testImplementation group: 'org.apache.commons', name: 'commons-lang3', version: '3.1'
+}
+
+task copyToUserlib( type: Copy ) {
+    from configurations.testCompileClasspath
+    into 'userlib'
+    rename 'commons-io-2.3.jar', 'org.apache.commons.io-2.3.0.jar'
+    rename 'commons-lang3-3.1.jar', 'org.apache.commons.lang3.jar'
+    rename 'http(.*)-osgi-(.*)', 'org.apache.httpcomponents.http$1_$2'
 }
