@@ -203,6 +203,7 @@ public class CreateLogObject {
 			 */
 			isNew = Constants.getLogAllMembersOnCreate();
 		}
+		boolean isDeleting = logType == TypeOfLog.Delete;
 
 		final Collection<? extends IMendixObjectMember<?>> members = inputObject.getMembers(sudoContext).values();
 		final List<IMendixObject> logLineList = new ArrayList<IMendixObject>(members.size());
@@ -217,12 +218,12 @@ public class CreateLogObject {
 			if (member instanceof MendixObjectReference) {
 				if (!member.getName().startsWith("System."))
 					logLineList.addAll(createReferenceLogLine(logObject, (MendixObjectReference) member, isNew,
-							sudoContext, currentContext));
+							isDeleting, sudoContext, currentContext));
 			}
 
 			else if (member instanceof MendixObjectReferenceSet)
 				logLineList.addAll(createReferenceSetLogLine(logObject, (MendixObjectReferenceSet) member, isNew,
-						sudoContext, currentContext));
+						isDeleting, sudoContext, currentContext));
 
 			else {
 				final String attributeName = member.getName();
@@ -230,7 +231,7 @@ public class CreateLogObject {
 				if (!attributeName.startsWith("System.") && !attributeName.equals("changedDate")
 						&& !attributeName.equals("createdDate")) {
 					logLineList.addAll(createSingleLogLine(logObject, member, MemberType.Attribute.toString(), isNew,
-							sudoContext));
+							isDeleting, sudoContext));
 				}
 			}
 		}
@@ -245,12 +246,13 @@ public class CreateLogObject {
 		return 0;
 	}
 
-	private static List<IMendixObject> createSingleLogLine(final IMendixObject logObject, final IMendixObjectMember<?> member,
-			final String memberType, final boolean isNew, final IContext context) throws CoreException {
+	private static List<IMendixObject> createSingleLogLine(final IMendixObject logObject,
+			final IMendixObjectMember<?> member, final String memberType, final boolean isNew, final boolean isDeleting,
+			final IContext context) throws CoreException {
 		final String oldValue = getMemberValueString(member, false, context), newValue = getMemberValueString(member, true, context);
 		
 		final boolean newOrChangedObject = !oldValue.equals(newValue) || isNew;
-		if (!Constants.getIncludeOnlyChangedAttributes() || newOrChangedObject) {
+		if (!Constants.getIncludeOnlyChangedAttributes() || isDeleting || newOrChangedObject) {
 			final IMendixObject logLine = Core.instantiate(context, LogLine.getType());
 
 			logLine.setValue(context, LogLine.MemberNames.Member.toString(), member.getName());
@@ -273,14 +275,15 @@ public class CreateLogObject {
 		return Collections.emptyList();
 	}
 
-	private static List<IMendixObject> createReferenceLogLine(final IMendixObject logObject, final MendixObjectReference member,
-			final boolean isNew, final IContext sudocontext, final IContext currentcontext) throws CoreException {
+	private static List<IMendixObject> createReferenceLogLine(final IMendixObject logObject,
+			final MendixObjectReference member, final boolean isNew, boolean isDeleting, final IContext sudocontext,
+			final IContext currentcontext) throws CoreException {
 		// get current and previous id
 		final IMendixIdentifier currentId = member.getValue(currentcontext);
 		final IMendixIdentifier previousId = member.getOriginalValue(currentcontext);
 
 		final boolean newOrChangedObject = !Objects.equals(currentId, previousId) || isNew;
-		if (!Constants.getIncludeOnlyChangedAttributes() || newOrChangedObject) {
+		if (!Constants.getIncludeOnlyChangedAttributes() || isDeleting || newOrChangedObject) {
 			final List<IMendixObject> logLineList = new ArrayList<IMendixObject>();
 			final IMendixObject logLine = Core.instantiate(sudocontext, LogLine.getType());
 
@@ -371,8 +374,8 @@ public class CreateLogObject {
 			final IMendixIdentifier i2) -> (int) (i1.toLong() - i2.toLong());
 
 	private static List<IMendixObject> createReferenceSetLogLine(final IMendixObject logObject,
-			final MendixObjectReferenceSet member, final boolean isNew, final IContext sudocontext, final IContext currentcontext)
-			throws CoreException {
+			final MendixObjectReferenceSet member, final boolean isNew, boolean isDeleting, final IContext sudocontext,
+			final IContext currentcontext) throws CoreException {
 
 		final List<IMendixIdentifier> currentIdList = member.getValue(currentcontext);
 		final List<IMendixIdentifier> previousIdList = member.getOriginalValue(currentcontext);
@@ -381,7 +384,7 @@ public class CreateLogObject {
 		previousIdList.sort(IDCOMPARATOR);
 
 		final boolean newOrChangedObjects = !Objects.equals(currentIdList, previousIdList) || isNew;
-		if (!Constants.getIncludeOnlyChangedAttributes() || newOrChangedObjects) {
+		if (!Constants.getIncludeOnlyChangedAttributes() || isDeleting || newOrChangedObjects) {
 
 			// The size below is just a good guess
 			final List<IMendixObject> logLineList = new ArrayList<IMendixObject>(currentIdList.size() + 1);
