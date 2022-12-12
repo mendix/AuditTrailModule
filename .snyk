@@ -1,0 +1,6 @@
+exclude:
+  global:
+    - javasource/objecthandling
+    - javasource/system
+    - javasource/test_crm
+    - javasource/unittesting
