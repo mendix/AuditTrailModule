@@ -16,3 +16,5 @@ build
 *.launch
 *.lock
 **/proxies/
+/.idea/
+/.dccache
