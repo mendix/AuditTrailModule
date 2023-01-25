@@ -1,6 +1,7 @@
 package audittrail.log;
 
 import java.lang.IllegalArgumentException;
+import java.math.BigDecimal;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -428,25 +429,28 @@ public class CreateLogObject {
 
 	private static String getMemberValueString(final IMendixObjectMember<?> member, final boolean fromCache, final IContext context) {
 		Object value = null;
-		// Values from cache
-		if (fromCache == true)
+		
+		if (fromCache == true) {
+			// Values from cache
 			value = member.getValue(context);
-
-		// Values form DB
-		else
+		} else {
+			// Values form DB
 			value = member.getOriginalValue(context);
+		}
 
 		if (value != null) {
-
-			if (value instanceof Date)
+			if (value instanceof Date) {
 				return parseDate((Date) value, context);
-
-			else if (value instanceof String)
+			} else if (value instanceof BigDecimal) {
+				return String.valueOf(((BigDecimal) value).stripTrailingZeros()).trim();
+			} else if (value instanceof String) {
 				return (String) value;
-
-			return String.valueOf(value).trim();
-		} else
-			return "";
+			} else {
+				return String.valueOf(value).trim();
+			}
+		}
+		
+		return "";
 	}
 
 	private static String parseDate(final Date date, final IContext context) {
