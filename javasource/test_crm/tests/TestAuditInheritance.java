@@ -1,7 +1,10 @@
 package test_crm.tests;
 
 import java.util.Arrays;
+import java.util.Calendar;
 import java.util.Collections;
+import java.util.Date;
+import java.util.TimeZone;
 
 import com.mendix.core.CoreException;
 import com.mendix.systemwideinterfaces.core.IMendixObject;
@@ -17,6 +20,7 @@ import test_crm.tests.expected.ExpectedLog;
 
 import static test_crm.proxies.Company.MemberNames.CompanyNr;
 import static test_crm.proxies.Company.MemberNames.Dec;
+import static test_crm.proxies.Company.MemberNames.Founded;
 import static test_crm.proxies.Company.MemberNames.Name;
 import static test_crm.proxies.Company.MemberNames.Number;
 import static test_crm.proxies.Company.MemberNames.InternNr;
@@ -53,10 +57,14 @@ public class TestAuditInheritance extends TestAuditBase {
 
 		company.setName(NAME2);
 		company.setDec(new java.math.BigDecimal("0.00000000")); // should not be considered changed
+		company.setFounded(FOUNDED_DATE);
 		company.commit();
 
 		// Assert log was created
-		final ExpectedLog expectedLog = createExpectedLog(TypeOfLog.Change, company).changeAttribute(Name, NAME, NAME2);
+		final ExpectedLog expectedLog =
+			createExpectedLog(TypeOfLog.Change, company)
+				.changeAttribute(Name, NAME, NAME2)
+				.changeAttribute(Founded, "", "11/04/1991 (UTC)");
 
 		final ActualLog actualLog = ActualLog.getLastLog(context, company.getMendixObject().getId().toLong());
 
@@ -175,17 +183,29 @@ public class TestAuditInheritance extends TestAuditBase {
 					.addAttribute(Name, NAME).addAttribute(CompanyNr, COMPANY_NR)
 					.addAttribute(InternNr, company.getInternNr())
 					.addAttribute(Dec, 0).addAttribute(Number, 0)
+					.addAttribute(Founded, "")
 					.addReferences(Company_Group, context, MemberType.ReferenceSet, groupObjects);
 		} else {
 			return new ExpectedLog(typeOfLog, Company.entityName, admin, initialDate, Company.entityName)
 					.keepAttribute(Name, NAME).keepAttribute(CompanyNr, COMPANY_NR)
 					.keepAttribute(InternNr, company.getInternNr())
 					.keepAttribute(Dec, 0).keepAttribute(Number, 0)
+					.keepAttribute(Founded, "")
 					.keepReferences(Company_Group, context, MemberType.ReferenceSet, groupObjects);
 		}
+	}
+
+	private static Date createDate() {
+		Calendar calendar = Calendar.getInstance();
+		calendar.set(Calendar.YEAR, 1991);
+		calendar.set(Calendar.MONTH, 10);
+		calendar.set(Calendar.DATE, 4);
+		calendar.set(Calendar.HOUR, 2);
+		return calendar.getTime();
 	}
 
 	private static final String NAME = "Company";
 	private static final String NAME2 = "Company2";
 	private static final String COMPANY_NR = "123";
+	private static final Date FOUNDED_DATE = createDate();
 }
