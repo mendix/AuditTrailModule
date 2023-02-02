@@ -15,8 +15,10 @@ import test_crm.proxies.Group;
 import test_crm.tests.actual.ActualLog;
 import test_crm.tests.expected.ExpectedLog;
 
-import static test_crm.proxies.Company.MemberNames.Name;
 import static test_crm.proxies.Company.MemberNames.CompanyNr;
+import static test_crm.proxies.Company.MemberNames.Dec;
+import static test_crm.proxies.Company.MemberNames.Name;
+import static test_crm.proxies.Company.MemberNames.Number;
 import static test_crm.proxies.Company.MemberNames.InternNr;
 import static test_crm.proxies.Company.MemberNames.Company_Group;
 
@@ -50,12 +52,14 @@ public class TestAuditInheritance extends TestAuditBase {
 		final Company company = createBaseCompany();
 
 		company.setName(NAME2);
+		company.setDec(new java.math.BigDecimal("0.00000000")); // should not be considered changed
 		company.commit();
 
 		// Assert log was created
 		final ExpectedLog expectedLog = createExpectedLog(TypeOfLog.Change, company).changeAttribute(Name, NAME, NAME2);
 
 		final ActualLog actualLog = ActualLog.getLastLog(context, company.getMendixObject().getId().toLong());
+
 		expectedLog.verify(actualLog);
 	}
 
@@ -170,11 +174,13 @@ public class TestAuditInheritance extends TestAuditBase {
 			return new ExpectedLog(typeOfLog, Company.entityName, admin, initialDate, Company.entityName)
 					.addAttribute(Name, NAME).addAttribute(CompanyNr, COMPANY_NR)
 					.addAttribute(InternNr, company.getInternNr())
+					.addAttribute(Dec, 0).addAttribute(Number, 0)
 					.addReferences(Company_Group, context, MemberType.ReferenceSet, groupObjects);
 		} else {
 			return new ExpectedLog(typeOfLog, Company.entityName, admin, initialDate, Company.entityName)
 					.keepAttribute(Name, NAME).keepAttribute(CompanyNr, COMPANY_NR)
 					.keepAttribute(InternNr, company.getInternNr())
+					.keepAttribute(Dec, 0).keepAttribute(Number, 0)
 					.keepReferences(Company_Group, context, MemberType.ReferenceSet, groupObjects);
 		}
 	}
