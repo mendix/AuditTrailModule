@@ -1,36 +1,108 @@
-apply plugin: 'application'
+plugins {
+    id 'java'
+    id 'com.mendix.gradle.publish-module-plugin' version '1.12'
+    id 'net.researchgate.release' version '2.8.1'
+}
 
 import org.gradle.api.internal.file.copy.CopySpecInternal
 
-sourceCompatibility = '1.8'
+sourceCompatibility = '11'
 [compileJava, compileTestJava]*.options*.encoding = 'UTF-8'
 
-repositories {
-    mavenCentral()
+project.ext {
+    mendixPublicApiVersion = '9.0.5'
+    userLibDir = 'userlib'
 }
 
 configurations.all {
     transitive = false
 }
 
+mxMarketplace {
+    moduleName    = "AuditTrail"
+    moduleLicense = "Apache V2"
+    appNumber     = 138
+    appName       = "Audittrail"
+    appDirectory      = "."
+    versionPathPrefix = "__Version " // the path prefix within the module to the version folder
+}
+
+repositories {
+    maven {
+        url 'https://nexus.rnd.mendix.com/repository/repo1-proxy/'
+    }
+    maven {
+        url 'https://nexus.rnd.mendix.com/repository/maven-hosted/'
+    }
+}
+
+
 dependencies {
-    // TEST_CRM
-    compile group: 'org.hamcrest', name: 'hamcrest', version: '2.2'
+    testImplementation(
+            [group: 'com.mendix', name: 'public-api', version: "$mendixPublicApiVersion"],
 
-    // UnitTesting
-    compile group: 'junit', name: 'junit', version: '4.11'
-    compile group: 'commons-io', name: 'commons-io', version: '2.3'
-    compile group: 'org.apache.httpcomponents', name: 'httpcore-osgi', version: '4.4.1'
-    compile group: 'org.apache.httpcomponents', name: 'httpclient-osgi', version: '4.4.1'
+            // TEST_CRM
+            [group: 'org.hamcrest', name: 'hamcrest', version: '2.2'],
 
-    // UnitTesting and ObjectHandling
-    compile group: 'org.apache.commons', name: 'commons-lang3', version: '3.1'
+            // UnitTesting
+            [group: 'junit', name: 'junit', version: '4.13.1'],
+            [group: 'commons-io', name: 'commons-io', version: '2.11.0'],
+            [group: 'org.apache.commons', name: 'commons-lang3', version: '3.12.0'],
+            [group: 'org.apache.httpcomponents.core5', name: 'httpcore5', version: '5.0.3'],
+            [group: 'org.apache.httpcomponents.client5', name: 'httpclient5', version: '5.0.3']
+    )
+
+    compileOnly([group: 'com.mendix', name: 'public-api', version: "$mendixPublicApiVersion"])
 }
 
-task copyToUserlib( type: Copy ) {
+task copyAllToUserlib(type: Copy) {
     from configurations.testCompileClasspath
-    into 'userlib'
-    rename 'commons-io-2.3.jar', 'org.apache.commons.io-2.3.0.jar'
-    rename 'commons-lang3-3.1.jar', 'org.apache.commons.lang3.jar'
-    rename 'http(.*)-osgi-(.*)', 'org.apache.httpcomponents.http$1_$2'
+    into userLibDir
 }
+
+task copyRuntimeToUserlib(type: Copy) {
+    from configurations.runtimeClasspath
+    into userLibDir
+    eachFile { fileCopyDetails -> new File(destinationDir, "${fileCopyDetails.name}.${project.name}.RequiredLib").write '' }
+}
+
+clean {
+    delete "$userLibDir"
+}
+
+task prepareMpk {
+    dependsOn 'clean'
+    dependsOn 'copyRuntimeToUserlib'
+
+    tasks.findByName('copyRuntimeToUserlib').mustRunAfter 'clean'
+}
+
+task prepareTest {
+    dependsOn 'clean'
+    dependsOn 'copyAllToUserlib'
+
+    tasks.findByName('copyAllToUserlib').mustRunAfter 'clean'
+}
+
+test {
+    exclude 'unittesting/*'
+}
+
+release {
+    tagTemplate = '$name-$version'
+}
+
+task afterReleaseBuildTask {
+    dependsOn 'prepareMpk'
+    dependsOn 'prepareTest'
+    dependsOn 'test'
+    dependsOn 'publishModuleToMarketplace'
+
+    tasks.findByName('prepareTest').mustRunAfter 'prepareMpk'
+    tasks.findByName('test').mustRunAfter 'prepareTest'
+    tasks.findByName('publishModuleToMarketplace').mustRunAfter 'test'
+}
+
+exportModule.dependsOn prepareMpk
+mxBuild.dependsOn prepareTest
+afterReleaseBuild.dependsOn afterReleaseBuildTask
