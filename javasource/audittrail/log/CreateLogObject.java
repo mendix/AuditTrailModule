@@ -11,6 +11,7 @@ import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -83,6 +84,7 @@ public class CreateLogObject {
 					+ auditableObject.getId().toLong() + "), state: " + auditableObject.getState() + "/" + logType);
 
 		final IContext sudoContext = Core.createSystemContext();
+		sudoContext.getSession().setTimeZone(getTimeZone(context));
 		final IMendixObject logObject = Core.instantiate(sudoContext, Log.getType());
 
 		IMendixIdentifier userObjectId = null;
@@ -190,6 +192,13 @@ public class CreateLogObject {
 		}
 	}
 
+	private static String getTimeZone(final IContext context) {
+		final TimeZone tz = context.getSession().getTimeZone();
+		if (tz != null) return tz.getID();
+		if (Constants.getServerTimeZone() == null || Constants.getServerTimeZone().isEmpty()) return "GMT";
+		return Constants.getServerTimeZone();
+	}
+
 	private static int createLogLines(final IMendixObject inputObject, final IMendixObject logObject, final IContext sudoContext,
 			final IContext currentContext, final TypeOfLog logType, final String skipAssociation) throws CoreException {
 		boolean isNew = false;
@@ -248,10 +257,11 @@ public class CreateLogObject {
 
 	private static List<IMendixObject> createSingleLogLine(final IMendixObject logObject, final IMendixObjectMember<?> member,
 			final String memberType, final boolean isNew, final IContext context) throws CoreException {
-		final String oldValue = getMemberValueString(member, false, context), newValue = getMemberValueString(member, true, context);
+		final String oldValue = getMemberValueString(member, false, context);
+		final String newValue = getMemberValueString(member, true, context);
 		
-		final boolean newOrChangedObject = !oldValue.equals(newValue) || isNew;
-		if (!Constants.getIncludeOnlyChangedAttributes() || newOrChangedObject) {
+		final boolean newOrChangedAttribute = isNew || !oldValue.equals(newValue);
+		if (newOrChangedAttribute || !Constants.getIncludeOnlyChangedAttributes()) {
 			final IMendixObject logLine = Core.instantiate(context, LogLine.getType());
 
 			logLine.setValue(context, LogLine.MemberNames.Member.toString(), member.getName());
@@ -264,7 +274,7 @@ public class CreateLogObject {
 			else
 				logLine.setValue(context, LogLine.MemberNames.OldValue.toString(), oldValue);
 
-			if (newOrChangedObject)
+			if (newOrChangedAttribute)
 				incNumberOfChangedMembers(logObject, context, context, isNew, member.getName());
 
 			return Collections.singletonList(logLine);
@@ -428,52 +438,48 @@ public class CreateLogObject {
 	}
 
 	private static String getMemberValueString(final IMendixObjectMember<?> member, final boolean fromCache, final IContext context) {
-		Object value = null;
-		
-		if (fromCache == true) {
-			// Values from cache
-			value = member.getValue(context);
-		} else {
-			// Values form DB
-			value = member.getOriginalValue(context);
+		final Object value = (fromCache) ? member.getValue(context) : member.getOriginalValue(context);
+
+		if (value == null) {
+			return "";
 		}
 
-		if (value != null) {
-			if (value instanceof Date) {
-				return parseDate((Date) value, context);
-			} else if (value instanceof BigDecimal) {
-				return String.valueOf(((BigDecimal) value).stripTrailingZeros()).trim();
-			} else if (value instanceof String) {
-				return (String) value;
-			} else {
-				return String.valueOf(value).trim();
-			}
+		if (value instanceof Date) {
+			return parseDate((Date) value, context);
 		}
-		
-		return "";
+
+		if (value instanceof BigDecimal) {
+			return String.valueOf(((BigDecimal) value).stripTrailingZeros()).trim();
+		}
+
+		if (value instanceof String) {
+			return (String) value;
+		}
+
+		return String.valueOf(value).trim();
 	}
 
 	private static String parseDate(final Date date, final IContext context) {
-		String dateOutput = "";
-		if (date != null) {
-			final DateFormat dateFormat = new SimpleDateFormat(Constants.getLogLineDateFormat());
-			if (Constants.getLogServerTimeZoneDateNotation()) {
-				final TimeZone zone = TimeZone.getTimeZone(Constants.getServerTimeZone());
-				dateFormat.setTimeZone(zone);
-				dateOutput = dateFormat.format(date) + " (UTC) ";
-			}
-
-			if (Constants.getLogSessionTimeZoneDateNotation() && context.getSession() != null
-					&& context.getSession().getTimeZone() != null) {
-				if (!"".equals(dateOutput))
-					dateOutput += " / ";
-
-				final TimeZone zone = context.getSession().getTimeZone();
-				dateFormat.setTimeZone(zone);
-				dateOutput += dateFormat.format(date) + " (" + zone.getDisplayName() + ") ";
-			}
+		if (date == null) {
+			return "";
 		}
 
-		return dateOutput;
+		List<String> dateFormats = new LinkedList<String>();
+
+		if (Constants.getLogServerTimeZoneDateNotation()) {
+			dateFormats.add(dateInZone(date, TimeZone.getTimeZone(Constants.getServerTimeZone())));
+		}
+
+		if (Constants.getLogSessionTimeZoneDateNotation() && context.getSession() != null && context.getSession().getTimeZone() != null) {
+			dateFormats.add(dateInZone(date, context.getSession().getTimeZone()));
+		}
+
+		return dateFormats.stream().collect(Collectors.joining(" / "));
+	}
+
+	private static String dateInZone(final Date date, final TimeZone zone) {
+		final DateFormat dateFormat = new SimpleDateFormat(Constants.getLogLineDateFormat());
+		dateFormat.setTimeZone(zone);
+		return dateFormat.format(date) + " (" + zone.getID() + ")";
 	}
 }
