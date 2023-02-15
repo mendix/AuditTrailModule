@@ -1,3 +1,4 @@
 We fixed the issue where unchanged attributes of type Decimal would appear as changed in the log (Ticket 155136).
 We fixed the issue where setting LogSessionTimeZoneDateNotation flag to True would not affect logging (Ticket 104234).
 We fixed the issue where server timezone would be marked as UTC even if the setting for server time zone is different (Ticket 104234).
+We fixed the issue where creating a log for a reference would fail for users with no access to the association (Github issue #33).
