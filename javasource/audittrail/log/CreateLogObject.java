@@ -286,9 +286,11 @@ public class CreateLogObject {
 
 	private static List<IMendixObject> createReferenceLogLine(final IMendixObject logObject, final MendixObjectReference member,
 			final boolean isNew, final IContext sudocontext, final IContext currentcontext) throws CoreException {
+		IContext context = member.hasReadAccess(currentcontext) ? currentcontext : sudocontext;
+
 		// get current and previous id
-		final IMendixIdentifier currentId = member.getValue(currentcontext);
-		final IMendixIdentifier previousId = member.getOriginalValue(currentcontext);
+		final IMendixIdentifier currentId = member.getValue(context);
+		final IMendixIdentifier previousId = member.getOriginalValue(context);
 
 		final boolean newOrChangedObject = !Objects.equals(currentId, previousId) || isNew;
 		if (!Constants.getIncludeOnlyChangedAttributes() || newOrChangedObject) {
@@ -304,15 +306,15 @@ public class CreateLogObject {
 			logLineList.add(logLine);
 
 			if (Objects.equals(currentId, previousId)) {
-				logLineList.addAll(createLogLinesForReferencedObject(previousId, logLine.getId(), currentcontext,
+				logLineList.addAll(createLogLinesForReferencedObject(previousId, logLine.getId(), context,
 						TypeOfReferenceLog.No_Change));
 			} else {
 				if (currentId != null) {
-					logLineList.addAll(createLogLinesForReferencedObject(currentId, logLine.getId(), currentcontext,
+					logLineList.addAll(createLogLinesForReferencedObject(currentId, logLine.getId(), context,
 							TypeOfReferenceLog.Added));
 				}
 				if (previousId != null) {
-					logLineList.addAll(createLogLinesForReferencedObject(previousId, logLine.getId(), currentcontext,
+					logLineList.addAll(createLogLinesForReferencedObject(previousId, logLine.getId(), context,
 							TypeOfReferenceLog.Deleted));
 				}
 			}
@@ -385,8 +387,10 @@ public class CreateLogObject {
 			final MendixObjectReferenceSet member, final boolean isNew, final IContext sudocontext, final IContext currentcontext)
 			throws CoreException {
 
-		final List<IMendixIdentifier> currentIdList = member.getValue(currentcontext);
-		final List<IMendixIdentifier> previousIdList = member.getOriginalValue(currentcontext);
+		IContext context = member.hasReadAccess(currentcontext) ? currentcontext : sudocontext;
+
+		final List<IMendixIdentifier> currentIdList = member.getValue(context);
+		final List<IMendixIdentifier> previousIdList = member.getOriginalValue(context);
 
 		currentIdList.sort(IDCOMPARATOR);
 		previousIdList.sort(IDCOMPARATOR);
