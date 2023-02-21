@@ -84,7 +84,9 @@ public class CreateLogObject {
 					+ auditableObject.getId().toLong() + "), state: " + auditableObject.getState() + "/" + logType);
 
 		final IContext sudoContext = Core.createSystemContext();
-		sudoContext.getSession().setTimeZone(getTimeZone(context));
+
+		// We introduced proper timezone handling only in Mendix 9.12.3, so for earlier versions we can use only raw offset
+		sudoContext.getSession().setTimeZone(TimeZone.getTimeZone(getTimeZone(context)).getRawOffset() * (-1) / 60 / 1000);
 		final IMendixObject logObject = Core.instantiate(sudoContext, Log.getType());
 
 		IMendixIdentifier userObjectId = null;
