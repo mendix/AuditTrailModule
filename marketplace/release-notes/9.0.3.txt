@@ -1,0 +1,1 @@
+We now log all attributes of a deleted object even if 'IncludeOnlyChangedAttributes' is set to True. Before, no attributes would be logged on deletion.
