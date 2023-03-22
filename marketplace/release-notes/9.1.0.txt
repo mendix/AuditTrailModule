@@ -1,0 +1,1 @@
+We upgraded the module to Mendix version 9.18.4 to make it compatible with future versions of Mendix
