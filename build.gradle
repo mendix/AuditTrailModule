@@ -10,7 +10,7 @@ sourceCompatibility = '11'
 [compileJava, compileTestJava]*.options*.encoding = 'UTF-8'
 
 project.ext {
-    mendixPublicApiVersion = '9.0.5'
+    mendixPublicApiVersion = '9.18.3'
     userLibDir = 'userlib'
 }
 
