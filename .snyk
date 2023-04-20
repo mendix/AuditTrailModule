@@ -3,4 +3,4 @@ exclude:
     - javasource/objecthandling
     - javasource/system
     - javasource/test_crm
-    - javasource/unittesting
+    - src/test/java

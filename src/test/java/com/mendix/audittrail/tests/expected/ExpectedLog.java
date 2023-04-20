@@ -1,4 +1,4 @@
-package test_crm.tests.expected;
+package com.mendix.audittrail.tests.expected;
 
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.junit.Assert.assertEquals;
@@ -23,8 +23,8 @@ import audittrail.proxies.MemberType;
 import audittrail.proxies.TypeOfLog;
 import audittrail.proxies.TypeOfReferenceLog;
 import system.proxies.User;
-import test_crm.tests.actual.ActualLog;
-import test_crm.tests.actual.ActualLogLine;
+import com.mendix.audittrail.tests.actual.ActualLog;
+import com.mendix.audittrail.tests.actual.ActualLogLine;
 
 public class ExpectedLog {
 	// The model is inconsistent with the enum name and calls the following

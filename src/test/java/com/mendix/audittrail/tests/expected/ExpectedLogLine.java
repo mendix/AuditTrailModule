@@ -1,5 +1,5 @@
 
-package test_crm.tests.expected;
+package com.mendix.audittrail.tests.expected;
 
 import static org.junit.Assert.assertEquals;
 
@@ -7,7 +7,7 @@ import com.mendix.core.CoreException;
 
 import audittrail.proxies.LogLine;
 import audittrail.proxies.MemberType;
-import test_crm.tests.actual.ActualLogLine;
+import com.mendix.audittrail.tests.actual.ActualLogLine;
 
 public abstract class ExpectedLogLine {
 	private final String memberName;
