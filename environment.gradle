@@ -1,0 +1,7 @@
+def mxPathDefault = (System.getProperty('os.name').startsWith('Windows'))
+        ? "${System.getenv('PROGRAMFILES')}/Mendix"
+        : "${System.getenv('HOME')}/.mendix"
+def mxPath = System.getenv('MX_INSTALL_PATH') ?: System.getProperty('MX_INSTALL_PATH') ?: mxPathDefault
+def mxInstallVersion = System.getenv('MX_INSTALL_VERSION') ?: System.getProperty('MX_INSTALL_VERSION') ?: '9.18.4.62522'
+
+project.ext.mxInstallPath = "${mxPath}/${mxInstallVersion}"
