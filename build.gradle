@@ -4,7 +4,7 @@ plugins {
     id 'net.researchgate.release' version '2.8.1'
 }
 
-import org.gradle.api.internal.file.copy.CopySpecInternal
+apply from: 'environment.gradle'
 
 sourceCompatibility = '11'
 [compileJava, compileTestJava]*.options*.encoding = 'UTF-8'
@@ -12,10 +12,6 @@ sourceCompatibility = '11'
 project.ext {
     mendixPublicApiVersion = '9.18.3'
     userLibDir = 'userlib'
-}
-
-configurations.all {
-    transitive = false
 }
 
 mxMarketplace {
@@ -36,73 +32,67 @@ repositories {
     }
 }
 
-
 dependencies {
-    testImplementation(
-            [group: 'com.mendix', name: 'public-api', version: "$mendixPublicApiVersion"],
-
-            // TEST_CRM
-            [group: 'org.hamcrest', name: 'hamcrest', version: '2.2'],
-
-            // UnitTesting
-            [group: 'junit', name: 'junit', version: '4.13.1'],
-            [group: 'commons-io', name: 'commons-io', version: '2.11.0'],
-            [group: 'org.apache.commons', name: 'commons-lang3', version: '3.12.0'],
-            [group: 'org.apache.httpcomponents.core5', name: 'httpcore5', version: '5.0.3'],
-            [group: 'org.apache.httpcomponents.client5', name: 'httpclient5', version: '5.0.3']
-    )
-
     compileOnly([group: 'com.mendix', name: 'public-api', version: "$mendixPublicApiVersion"])
+    testCompileOnly("com.mendix:public-api:$mendixPublicApiVersion")
+
+    testImplementation('com.mendix.util:junit-helper:1.0.0') {
+        exclude group: 'com.mendix', module: 'public-api'
+    }
+
+    testImplementation(
+        [group: 'junit', name: 'junit', version: '4.13.1'],
+        [group: 'org.hamcrest', name: 'hamcrest', version: '2.2']
+    )
 }
 
-task copyAllToUserlib(type: Copy) {
-    from configurations.testCompileClasspath
-    into userLibDir
+sourceSets {
+    main {
+        java {
+            srcDir 'javasource'
+        }
+        resources {
+            srcDirs = ['resources', 'build/generated/resources']
+        }
+    }
 }
 
-task copyRuntimeToUserlib(type: Copy) {
-    from configurations.runtimeClasspath
-    into userLibDir
-    eachFile { fileCopyDetails -> new File(destinationDir, "${fileCopyDetails.name}.${project.name}.RequiredLib").write '' }
+tasks.register('copyComponents', Copy) {
+    from file('deployment/run/component.xml')
+    into 'build/generated/resources/OSGI-INF/'
+}
+
+processResources  {
+    dependsOn copyComponents
+}
+
+test {
+    useJUnit()
+    jvmArgs = ["-Djava.io.tmpdir=$temporaryDir"]
+    environment 'MX_INSTALL_PATH',mxInstallPath
+    classpath += fileTree("${mxInstallPath}/runtime/bundles").include('*.jar')
 }
 
 clean {
     delete "$userLibDir"
 }
 
-task prepareMpk {
-    dependsOn 'clean'
-    dependsOn 'copyRuntimeToUserlib'
-
-    tasks.findByName('copyRuntimeToUserlib').mustRunAfter 'clean'
-}
-
-task prepareTest {
-    dependsOn 'clean'
-    dependsOn 'copyAllToUserlib'
-
-    tasks.findByName('copyAllToUserlib').mustRunAfter 'clean'
-}
-
-test {
-    exclude 'unittesting/*'
-}
-
 release {
     tagTemplate = '$name-$version'
 }
 
-task afterReleaseBuildTask {
-    dependsOn 'prepareMpk'
-    dependsOn 'prepareTest'
-    dependsOn 'test'
-    dependsOn 'publishModuleToMarketplace'
-
-    tasks.findByName('prepareTest').mustRunAfter 'prepareMpk'
-    tasks.findByName('test').mustRunAfter 'prepareTest'
-    tasks.findByName('publishModuleToMarketplace').mustRunAfter 'test'
+tasks.register('copyRuntimeToUserlib', Copy) {
+    from configurations.runtimeClasspath
+    into userLibDir
+    eachFile { fileCopyDetails -> new File(destinationDir, "${fileCopyDetails.name}.${project.name}.RequiredLib").write '' }
+    dependsOn 'clean'
 }
 
-exportModule.dependsOn prepareMpk
-mxBuild.dependsOn prepareTest
+tasks.register('afterReleaseBuildTask') {
+    dependsOn 'copyRuntimeToUserlib'
+    dependsOn 'test'
+    dependsOn 'publishModuleToMarketplace'
+}
+
+exportModule.dependsOn copyRuntimeToUserlib
 afterReleaseBuild.dependsOn afterReleaseBuildTask

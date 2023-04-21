@@ -1,4 +1,4 @@
-package test_crm.tests.expected;
+package com.mendix.audittrail.tests.expected;
 
 import static org.hamcrest.Matchers.arrayContainingInAnyOrder;
 import static org.junit.Assert.assertEquals;
@@ -14,7 +14,7 @@ import com.mendix.systemwideinterfaces.core.IMendixObjectMember;
 
 import audittrail.proxies.ReferenceLog;
 import audittrail.proxies.TypeOfReferenceLog;
-import test_crm.tests.actual.ActualReferenceLog;
+import com.mendix.audittrail.tests.actual.ActualReferenceLog;
 
 public class ExpectedReferenceLog {
 	private final TypeOfReferenceLog operation;

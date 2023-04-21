@@ -1,4 +1,4 @@
-package test_crm.tests.expected;
+package com.mendix.audittrail.tests.expected;
 
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.junit.Assert.assertThat;
@@ -15,8 +15,8 @@ import com.mendix.systemwideinterfaces.core.IMendixObject;
 import audittrail.proxies.LogLine;
 import audittrail.proxies.MemberType;
 import audittrail.proxies.TypeOfReferenceLog;
-import test_crm.tests.actual.ActualLogLine;
-import test_crm.tests.actual.ActualReferenceLog;
+import com.mendix.audittrail.tests.actual.ActualLogLine;
+import com.mendix.audittrail.tests.actual.ActualReferenceLog;
 
 public class ExpectedLogLineReference extends ExpectedLogLine {
 	final private IContext context;

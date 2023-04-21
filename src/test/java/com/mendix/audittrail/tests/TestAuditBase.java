@@ -1,4 +1,4 @@
-package test_crm.tests;
+package com.mendix.audittrail.tests;
 
 import java.util.Date;
 
@@ -6,6 +6,7 @@ import com.mendix.core.Core;
 import com.mendix.core.CoreException;
 import com.mendix.systemwideinterfaces.core.IContext;
 import com.mendix.systemwideinterfaces.core.IMendixObject;
+import com.mendix.test.run.ProjectRunner;
 
 import org.junit.Before;
 
@@ -22,6 +23,7 @@ public abstract class TestAuditBase {
 
 	@Before
 	public void beforeTesting() throws CoreException {
+		ProjectRunner.run();
 		this.context = Core.createSystemContext();
 
 		this.initialDate = new Date();

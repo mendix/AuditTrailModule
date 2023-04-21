@@ -1,4 +1,4 @@
-package test_crm.tests.actual;
+package com.mendix.audittrail.tests.actual;
 
 import static org.junit.Assert.fail;
 

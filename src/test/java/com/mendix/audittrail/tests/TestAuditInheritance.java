@@ -1,10 +1,9 @@
-package test_crm.tests;
+package com.mendix.audittrail.tests;
 
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collections;
 import java.util.Date;
-import java.util.TimeZone;
 
 import com.mendix.core.CoreException;
 import com.mendix.systemwideinterfaces.core.IMendixObject;
@@ -15,8 +14,8 @@ import audittrail.proxies.MemberType;
 import audittrail.proxies.TypeOfLog;
 import test_crm.proxies.Company;
 import test_crm.proxies.Group;
-import test_crm.tests.actual.ActualLog;
-import test_crm.tests.expected.ExpectedLog;
+import com.mendix.audittrail.tests.actual.ActualLog;
+import com.mendix.audittrail.tests.expected.ExpectedLog;
 
 import static test_crm.proxies.Company.MemberNames.CompanyNr;
 import static test_crm.proxies.Company.MemberNames.Dec;
