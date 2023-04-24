@@ -9,11 +9,6 @@ apply from: 'environment.gradle'
 sourceCompatibility = '11'
 [compileJava, compileTestJava]*.options*.encoding = 'UTF-8'
 
-project.ext {
-    mendixPublicApiVersion = '9.18.3'
-    userLibDir = 'userlib'
-}
-
 mxMarketplace {
     moduleName    = "AuditTrail"
     moduleLicense = "Apache V2"
@@ -25,16 +20,15 @@ mxMarketplace {
 
 repositories {
     maven {
-        url 'https://nexus.rnd.mendix.com/repository/repo1-proxy/'
+        url 'https://nexus.rnd.mendix.com/repository/maven-hosted/'
     }
     maven {
-        url 'https://nexus.rnd.mendix.com/repository/maven-hosted/'
+        url 'https://nexus.rnd.mendix.com/repository/repo1-proxy/'
     }
 }
 
 dependencies {
-    compileOnly([group: 'com.mendix', name: 'public-api', version: "$mendixPublicApiVersion"])
-    testCompileOnly("com.mendix:public-api:$mendixPublicApiVersion")
+    implementation(fileTree(mxRuntimeBundles).include('*.jar'))
 
     testImplementation('com.mendix.util:junit-helper:1.0.0') {
         exclude group: 'com.mendix', module: 'public-api'
@@ -70,29 +64,15 @@ test {
     useJUnit()
     jvmArgs = ["-Djava.io.tmpdir=$temporaryDir"]
     environment 'MX_INSTALL_PATH',mxInstallPath
-    classpath += fileTree("${mxInstallPath}/runtime/bundles").include('*.jar')
-}
-
-clean {
-    delete "$userLibDir"
 }
 
 release {
     tagTemplate = '$name-$version'
 }
 
-tasks.register('copyRuntimeToUserlib', Copy) {
-    from configurations.runtimeClasspath
-    into userLibDir
-    eachFile { fileCopyDetails -> new File(destinationDir, "${fileCopyDetails.name}.${project.name}.RequiredLib").write '' }
-    dependsOn 'clean'
-}
-
 tasks.register('afterReleaseBuildTask') {
-    dependsOn 'copyRuntimeToUserlib'
     dependsOn 'test'
     dependsOn 'publishModuleToMarketplace'
 }
 
-exportModule.dependsOn copyRuntimeToUserlib
 afterReleaseBuild.dependsOn afterReleaseBuildTask

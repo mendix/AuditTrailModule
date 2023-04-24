@@ -1,0 +1,25 @@
+# This will upgrade the app to the version of Mendix corresponding to APPSTUDIO build number and run tests
+# Required environment:
+#  - APPSTUDIO;
+version: "2.2"
+services:
+  convert:
+    image: "${DOCKER_REGISTRY_RO_HOST:-nexus-docker-group.rnd.mendix.com}/mxbuild:${APPSTUDIO:-nightly}"
+    working_dir: /module
+    entrypoint: /module/entrypoint-convert.sh
+    volumes:
+      - ./:/module
+    environment:
+      - APPSTUDIO
+  test:
+    image: "${DOCKER_REGISTRY_RO_HOST:-nexus-docker-group.rnd.mendix.com}/mendix-runtime:${APPSTUDIO:-nightly}"
+    volumes:
+      - ./:/module
+    working_dir: /module/upgraded
+    environment:
+      - APPSTUDIO
+      - MX_INSTALL_PATH=/var/opt/runtime
+    entrypoint: /module/upgraded/gradlew test
+    depends_on:
+      "convert":
+        condition: service_completed_successfully
