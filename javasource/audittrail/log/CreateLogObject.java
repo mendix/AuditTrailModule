@@ -83,7 +83,7 @@ public class CreateLogObject {
 			logNode.debug("Evaluating audit log for object: " + auditableObject.getType() + "("
 					+ auditableObject.getId().toLong() + "), state: " + auditableObject.getState() + "/" + logType);
 
-		final IContext sudoContext = Core.createSystemContext();
+		final IContext sudoContext = context.createSudoClone();
 
 		// We introduced proper timezone handling only in Mendix 9.12.3, so for earlier versions we can use only raw offset
 		sudoContext.getSession().setTimeZone(TimeZone.getTimeZone(getTimeZone(context)).getRawOffset() * (-1) / 60 / 1000);
@@ -346,7 +346,7 @@ public class CreateLogObject {
 
 	private static List<IMendixObject> createReferenceObjects(final IMendixIdentifier attributeId, final IMendixIdentifier parentId,
 			final IContext currentcontext, final TypeOfReferenceLog typeOfReference, final IMendixObject refObj) {
-		final IMendixObject referenceLog = createReferenceLogObj(attributeId, parentId, typeOfReference);
+		final IMendixObject referenceLog = createReferenceLogObj(attributeId, parentId, typeOfReference, currentcontext);
 
 		final Stream<IMendixObject> referenceLineObjects = refObj.getPrimitives(currentcontext).stream()
 				.map(member -> createReferenceLineMendixObj(member, currentcontext, referenceLog.getId()));
@@ -355,14 +355,14 @@ public class CreateLogObject {
 	}
 
 	private static IMendixObject createReferenceLogObj(final IMendixIdentifier attributeId, final IMendixIdentifier parentId,
-			final TypeOfReferenceLog typeOfReference) {
+			final TypeOfReferenceLog typeOfReference, final IContext context) {
 		final Map<String, Object> nameToValueReferenceLog = new HashMap<String, Object>();
 		nameToValueReferenceLog.put(ReferenceLog.MemberNames.AttributeID.toString(),
 				String.valueOf(attributeId.toLong()));
 		nameToValueReferenceLog.put(ReferenceLog.MemberNames.Operation.toString(), typeOfReference.toString());
 		nameToValueReferenceLog.put(ReferenceLog.MemberNames.ReferenceLog_LogLine.toString(), parentId);
 
-		return createMendixObject(ReferenceLog.getType(), nameToValueReferenceLog);
+		return createMendixObject(ReferenceLog.getType(), nameToValueReferenceLog, context);
 	}
 
 	private static <T extends IMendixObjectMember<T>> IMendixObject createReferenceLineMendixObj(
@@ -373,11 +373,11 @@ public class CreateLogObject {
 		nameToValueReferenceLogLine.put(ReferenceLogLine.MemberNames.ReferenceLogLine_ReferenceLog.toString(),
 				refLogId);
 
-		return createMendixObject(ReferenceLogLine.getType(), nameToValueReferenceLogLine);
+		return createMendixObject(ReferenceLogLine.getType(), nameToValueReferenceLogLine, context);
 	}
 
-	private static IMendixObject createMendixObject(final String objectType, final Map<String, Object> nameToValue) {
-		final IContext systemContext = Core.createSystemContext();
+	private static IMendixObject createMendixObject(final String objectType, final Map<String, Object> nameToValue, final IContext context) {
+		final IContext systemContext = context.createSudoClone();
 		final IMendixObject mendixObject = Core.instantiate(systemContext, objectType);
 		nameToValue.forEach((name, value) -> mendixObject.setValue(systemContext, name, value));
 
