@@ -5,11 +5,15 @@ import java.util.Calendar;
 import java.util.Collections;
 import java.util.Date;
 
+import com.mendix.core.Core;
 import com.mendix.core.CoreException;
+import com.mendix.systemwideinterfaces.MendixRuntimeException;
 import com.mendix.systemwideinterfaces.core.IMendixObject;
 
 import org.junit.Test;
 
+import audittrail.actions.CreateLogRecordOfObject;
+import audittrail.proxies.Log;
 import audittrail.proxies.MemberType;
 import audittrail.proxies.TypeOfLog;
 import test_crm.proxies.Company;
@@ -17,6 +21,9 @@ import test_crm.proxies.Group;
 import com.mendix.audittrail.tests.actual.ActualLog;
 import com.mendix.audittrail.tests.expected.ExpectedLog;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertThrows;
 import static test_crm.proxies.Company.MemberNames.CompanyNr;
 import static test_crm.proxies.Company.MemberNames.Dec;
 import static test_crm.proxies.Company.MemberNames.Founded;
@@ -161,6 +168,40 @@ public class TestAuditInheritance extends TestAuditBase {
 
 		final ActualLog actualLog = ActualLog.getLastLog(context, company.getMendixObject().getId().toLong());
 		expectedLog.verify(actualLog);
+	}
+
+	@Test
+	public void testOnCommitAction() throws Exception {
+		// Arrange
+		final Company company = new Company(context);
+		company.setName(NAME);
+		company.setCompanyNr(COMPANY_NR);
+
+		// Act: do not commit the company, but call the on-commit action directly
+		MendixRuntimeException exception = assertThrows(
+				MendixRuntimeException.class,
+				() -> { new CreateLogRecordOfObject(context, company.getMendixObject()).executeAction(); }
+		);
+
+		// Assert
+		String actualError = exception.getCause().getMessage();
+		String expectedError = "Autocommitted objects detected at end of transaction for system session for entities:";
+		assertTrue(String.format("expected: '%s'; actual: '%s'", actualError, expectedError), actualError.startsWith(expectedError));
+	}
+
+	@Test
+	public void testNoLogOnRollback() throws Exception {
+		// Arrange
+		int logsBefore = Core.createXPathQuery(String.format("//%1s", Log.entityName)).execute(context).size();
+
+		// Act: commit the company inside a transaction and then roll back
+		context.startTransaction();
+		final Company company = createBaseCompany(group);
+		context.rollbackTransaction();
+
+		// Assert
+		int logsAfter = Core.createXPathQuery(String.format("//%1s", Log.entityName)).execute(context).size();
+		assertEquals("No logs should be added for a rolled back commit", logsBefore, logsAfter);
 	}
 
 	private Company createBaseCompany(final Group... groups) throws CoreException {
