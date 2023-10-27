@@ -5,6 +5,7 @@ import java.util.List;
 
 import com.mendix.core.Core;
 import com.mendix.core.CoreException;
+import com.mendix.systemwideinterfaces.core.IContext;
 import com.mendix.systemwideinterfaces.core.IMendixObject;
 
 import org.junit.After;
@@ -48,7 +49,8 @@ public class TestNoAdminAction extends TestAuditInheritance {
 	public void afterTesting() throws CoreException {
 		// We recreate the admin user here so all tests can still run until the end,
 		// even if we are not logged in as that user.
-		final User newAdmin = User.load(this.context, Core.instantiate(this.context, "Administration.Account").getId());
+		final IContext systemContext = Core.createSystemContext();
+		final User newAdmin = User.load(systemContext, Core.instantiate(systemContext, "Administration.Account").getId());
 		newAdmin.setActive(true);
 		newAdmin.setBlocked(false);
 		newAdmin.setFailedLogins(0);

@@ -1,0 +1,1 @@
+We now use same context to create logs to make sure that the object and the log are committed in the same transaction. If a transaction is rolled back, no log line is added anymore. Before this change, a log would be created even if a transaction was rolled back.
