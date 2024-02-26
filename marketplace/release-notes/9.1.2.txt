@@ -1,0 +1,1 @@
+We added the "LogUseDecimalScientificNotation" constant to control how large decimal values are displayed. The default behaviour is to use scientific notation, which can be changed to show the full value instead.
