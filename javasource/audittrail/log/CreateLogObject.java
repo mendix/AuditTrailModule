@@ -458,7 +458,7 @@ public class CreateLogObject {
 		}
 
 		if (value instanceof BigDecimal) {
-			if (Constants.getLogUseDecimalScientificNotation()) {
+			if ((Boolean) context.getSystemConfiguration().getConstantValue("AuditTrail.LogUseDecimalScientificNotation")) {
 				return String.valueOf(((BigDecimal) value).stripTrailingZeros()).trim();
 			} else { 
 				return ((BigDecimal) value).stripTrailingZeros().toPlainString();
