@@ -458,7 +458,11 @@ public class CreateLogObject {
 		}
 
 		if (value instanceof BigDecimal) {
-			return String.valueOf(((BigDecimal) value).stripTrailingZeros()).trim();
+			if ((Boolean) context.getSystemConfiguration().getConstantValue("AuditTrail.LogUseDecimalScientificNotation")) {
+				return String.valueOf(((BigDecimal) value).stripTrailingZeros()).trim();
+			} else { 
+				return ((BigDecimal) value).stripTrailingZeros().toPlainString();
+			}
 		}
 
 		if (value instanceof String) {
