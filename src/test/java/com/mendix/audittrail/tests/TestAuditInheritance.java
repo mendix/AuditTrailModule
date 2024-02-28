@@ -1,6 +1,5 @@
 package com.mendix.audittrail.tests;
 
-import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collections;
 import java.util.Date;
@@ -8,7 +7,6 @@ import java.util.Date;
 import com.mendix.core.Core;
 import com.mendix.core.CoreException;
 import com.mendix.systemwideinterfaces.MendixRuntimeException;
-import com.mendix.systemwideinterfaces.core.IMendixObject;
 
 import org.junit.Test;
 
@@ -17,19 +15,14 @@ import audittrail.proxies.Log;
 import audittrail.proxies.MemberType;
 import audittrail.proxies.TypeOfLog;
 import test_crm.proxies.Company;
-import test_crm.proxies.Group;
 import com.mendix.audittrail.tests.actual.ActualLog;
 import com.mendix.audittrail.tests.expected.ExpectedLog;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertThrows;
-import static test_crm.proxies.Company.MemberNames.CompanyNr;
-import static test_crm.proxies.Company.MemberNames.Dec;
 import static test_crm.proxies.Company.MemberNames.Founded;
 import static test_crm.proxies.Company.MemberNames.Name;
-import static test_crm.proxies.Company.MemberNames.Number;
-import static test_crm.proxies.Company.MemberNames.InternNr;
 import static test_crm.proxies.Company.MemberNames.Company_Group;
 
 /**
@@ -40,7 +33,7 @@ import static test_crm.proxies.Company.MemberNames.Company_Group;
  * Company has 3 attributes and an association to a set of groups. Logging of
  * this association is also tested in this class.
  */
-public class TestAuditInheritance extends TestAuditBase {
+public class TestAuditInheritance extends TestAuditWithData {
 
 	// Testing records without reference
 
@@ -204,37 +197,6 @@ public class TestAuditInheritance extends TestAuditBase {
 		assertEquals("No logs should be added for a rolled back commit", logsBefore, logsAfter);
 	}
 
-	private Company createBaseCompany(final Group... groups) throws CoreException {
-		final Company company = new Company(context);
-
-		company.setName(NAME);
-		company.setCompanyNr(COMPANY_NR);
-
-		company.setCompany_Group(Arrays.asList(groups));
-
-		company.commit();
-		return company;
-	}
-
-	private ExpectedLog createExpectedLog(final TypeOfLog typeOfLog, final Company company,
-			final IMendixObject... groupObjects) {
-		if (typeOfLog.equals(TypeOfLog.Add)) {
-			return new ExpectedLog(typeOfLog, Company.entityName, admin, initialDate, Company.entityName)
-					.addAttribute(Name, NAME).addAttribute(CompanyNr, COMPANY_NR)
-					.addAttribute(InternNr, company.getInternNr())
-					.addAttribute(Dec, 0).addAttribute(Number, 0)
-					.addAttribute(Founded, "")
-					.addReferences(Company_Group, context, MemberType.ReferenceSet, groupObjects);
-		} else {
-			return new ExpectedLog(typeOfLog, Company.entityName, admin, initialDate, Company.entityName)
-					.keepAttribute(Name, NAME).keepAttribute(CompanyNr, COMPANY_NR)
-					.keepAttribute(InternNr, company.getInternNr())
-					.keepAttribute(Dec, 0).keepAttribute(Number, 0)
-					.keepAttribute(Founded, "")
-					.keepReferences(Company_Group, context, MemberType.ReferenceSet, groupObjects);
-		}
-	}
-
 	private static Date createDate() {
 		Calendar calendar = Calendar.getInstance();
 		calendar.set(Calendar.YEAR, 1991);
@@ -243,9 +205,7 @@ public class TestAuditInheritance extends TestAuditBase {
 		calendar.set(Calendar.HOUR, 2);
 		return calendar.getTime();
 	}
-
-	private static final String NAME = "Company";
+	
 	private static final String NAME2 = "Company2";
-	private static final String COMPANY_NR = "123";
 	private static final Date FOUNDED_DATE = createDate();
 }
