@@ -1,0 +1,1 @@
+We fixed an issue where the session timezone would be changed after call to "AuditTrail.BCo_AudittrailSuperClass" microflow (Ticket 214500).
