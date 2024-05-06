@@ -29,8 +29,7 @@ repositories {
 
 dependencies {
     implementation(fileTree(mxRuntimeBundles).include('*.jar'))
-
-    testImplementation('org.mockito:mockito-all:2.0.2-beta')
+    
     testImplementation('com.mendix.util:junit-helper:1.0.0') {
         exclude group: 'com.mendix', module: 'public-api'
     }
