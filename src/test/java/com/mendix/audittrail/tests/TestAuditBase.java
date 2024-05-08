@@ -1,6 +1,6 @@
 package com.mendix.audittrail.tests;
 
-import java.util.Date;
+import java.util.*;
 
 import com.mendix.core.Core;
 import com.mendix.core.CoreException;
@@ -46,7 +46,15 @@ public abstract class TestAuditBase {
 
 		return newGroup;
 	}
-
+	
+	protected void updateConstant(String constantName, Object constantValue) {
+		final Map<String, Object> map = new HashMap<>();
+		final Map<String, Object> map2 = new HashMap<>();
+		map.put("MicroflowConstants", map2);
+		map2.put(constantName, constantValue);
+		Core.getConfiguration().updateConfiguration(map, true);
+	}
+	
 	private static final String GROUP_NAME = "GROUP_NAME";
 	private static final String GROUP_CODE = "CDE";
 	private static final String GROUP_NAME2 = "GROUP_NAME2";
