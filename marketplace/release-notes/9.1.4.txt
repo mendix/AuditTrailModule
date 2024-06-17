@@ -1,0 +1,1 @@
+We replaced the deprecated Format String widget with the HTML Element widget. (Ticket 217759)
