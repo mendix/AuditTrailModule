@@ -1,0 +1,2 @@
+### Security
+We updated the HTML Element widget to version 1.2.1, which uses DOMPurify version 2.5.6 to prevent a cross-site scripting vulnerability.
