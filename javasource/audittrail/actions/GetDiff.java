@@ -17,14 +17,18 @@ import com.mendix.webui.CustomJavaAction;
 
 public class GetDiff extends CustomJavaAction<java.lang.String>
 {
-	private java.lang.String OldText;
-	private java.lang.String NewText;
+	private final java.lang.String OldText;
+	private final java.lang.String NewText;
 
-	public GetDiff(IContext context, java.lang.String OldText, java.lang.String NewText)
+	public GetDiff(
+		IContext context,
+		java.lang.String _oldText,
+		java.lang.String _newText
+	)
 	{
 		super(context);
-		this.OldText = OldText;
-		this.NewText = NewText;
+		this.OldText = _oldText;
+		this.NewText = _newText;
 	}
 
 	@java.lang.Override

@@ -24,12 +24,15 @@ import com.mendix.webui.CustomJavaAction;
  */
 public class CreateLogRecordChangesBeforeDelete extends CustomJavaAction<IMendixObject>
 {
-	private IMendixObject AuditableObject;
+	private final IMendixObject AuditableObject;
 
-	public CreateLogRecordChangesBeforeDelete(IContext context, IMendixObject AuditableObject)
+	public CreateLogRecordChangesBeforeDelete(
+		IContext context,
+		IMendixObject _auditableObject
+	)
 	{
 		super(context);
-		this.AuditableObject = AuditableObject;
+		this.AuditableObject = _auditableObject;
 	}
 
 	@java.lang.Override

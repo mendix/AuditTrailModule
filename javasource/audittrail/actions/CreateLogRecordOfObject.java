@@ -28,12 +28,15 @@ import com.mendix.webui.CustomJavaAction;
  */
 public class CreateLogRecordOfObject extends CustomJavaAction<IMendixObject>
 {
-	private IMendixObject AuditableObject;
+	private final IMendixObject AuditableObject;
 
-	public CreateLogRecordOfObject(IContext context, IMendixObject AuditableObject)
+	public CreateLogRecordOfObject(
+		IContext context,
+		IMendixObject _auditableObject
+	)
 	{
 		super(context);
-		this.AuditableObject = AuditableObject;
+		this.AuditableObject = _auditableObject;
 	}
 
 	@java.lang.Override

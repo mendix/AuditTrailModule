@@ -20,4 +20,8 @@ build
 /.dccache
 /theme-cache/
 /userlib/
+/project-settings.user.json
+/.mendix-cache/
+
+# Ignore files used for local testing
 /upgraded
