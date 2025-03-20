@@ -141,11 +141,11 @@ public class CreateLogObject {
 				if (association == null) {
 					for (final IMetaAssociation ass : imObject.getMetaAssociationsChild()) {
 						if (Core.isSubClassOf(Log.getType(), ass.getParent().getId())
+								&& !ass.getName().equals(Log.MemberNames.Log_User.toString())
 								&& (ass.getType() == AssociationType.REFERENCESET
 										|| ass.getOwner() != AssociationOwner.BOTH)) {
 							association = ass.getName();
 							logObject.setValue(sudoContext, association, auditableObject.getId());
-
 							setAssociationName(auditableObject.getType(), association);
 							break;
 						}
