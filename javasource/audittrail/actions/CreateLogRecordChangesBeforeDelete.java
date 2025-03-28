@@ -14,6 +14,7 @@ import audittrail.proxies.TypeOfLog;
 import com.mendix.systemwideinterfaces.core.IContext;
 import com.mendix.systemwideinterfaces.core.IMendixObject;
 import com.mendix.webui.CustomJavaAction;
+import com.mendix.systemwideinterfaces.core.UserAction;
 
 /**
  * This java action creates a log object of the input object. The current and old member values of this object are stored in the log.
@@ -22,7 +23,7 @@ import com.mendix.webui.CustomJavaAction;
  * 
  * The Log Object that is being returned can be ignored, the Java committed the entity.
  */
-public class CreateLogRecordChangesBeforeDelete extends CustomJavaAction<IMendixObject>
+public class CreateLogRecordChangesBeforeDelete extends UserAction<IMendixObject>
 {
 	private final IMendixObject AuditableObject;
 

@@ -1,0 +1,2 @@
+We upgraded the module to Mendix version 10.21.0 to make it compatible with future versions of Mendix
+We removed usages of deprecated methods in `com.mendix.core.Core` from the implementation

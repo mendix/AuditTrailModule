@@ -13,6 +13,7 @@ import audittrail.log.CreateLogObject;
 import com.mendix.systemwideinterfaces.core.IContext;
 import com.mendix.systemwideinterfaces.core.IMendixObject;
 import com.mendix.webui.CustomJavaAction;
+import com.mendix.systemwideinterfaces.core.UserAction;
 
 /**
  * An object is created f entity type 'AuditTrail.Log'.
@@ -26,7 +27,7 @@ import com.mendix.webui.CustomJavaAction;
  * 
  * The Log Object that is being returned can be ignored, the Java committed the entity.
  */
-public class CreateLogRecordOfObject extends CustomJavaAction<IMendixObject>
+public class CreateLogRecordOfObject extends UserAction<IMendixObject>
 {
 	private final IMendixObject AuditableObject;
 
