@@ -1,0 +1,1 @@
+We updated the HTML Element widget dependency to version 1.2.2
