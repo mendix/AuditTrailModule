@@ -41,10 +41,14 @@ public class ActualLog {
 
 	private static Log getLastLogForId(final IContext context, final long objectId) throws CoreException {
 		// Using XPath to sort by date
-		final String xpathQuery = String.format("//%1s[%2s = '%3d']", Log.entityName, Log.MemberNames.ReferenceId,
-				objectId);
-		final Map<String, String> sort = Collections.singletonMap(Log.MemberNames.DateTime.name(), "DESC");
-		final List<IMendixObject> objects = Core.retrieveXPathQuery(context, xpathQuery, 1, 0, sort);
+		final String xpathQuery =
+			String.format("//%1s[%2s = '%3d']", Log.entityName, Log.MemberNames.ReferenceId, objectId);
+		final List<IMendixObject> objects =
+			Core.createXPathQuery(xpathQuery)
+				.setAmount(1)
+				.setOffset(0)
+				.addSort(Log.MemberNames.DateTime.name(), false)
+				.execute(context);
 
 		return Log.initialize(context, objects.get(0));
 	}
