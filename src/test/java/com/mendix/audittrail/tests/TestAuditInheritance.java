@@ -3,20 +3,25 @@ package com.mendix.audittrail.tests;
 import java.util.Calendar;
 import java.util.Collections;
 import java.util.Date;
+import java.util.stream.Collectors;
 
 import com.mendix.core.Core;
 import com.mendix.core.CoreException;
 import com.mendix.systemwideinterfaces.MendixRuntimeException;
 
+import com.mendix.systemwideinterfaces.core.IMendixObject;
 import org.junit.Test;
 
 import audittrail.actions.CreateLogRecordOfObject;
 import audittrail.proxies.Log;
 import audittrail.proxies.MemberType;
 import audittrail.proxies.TypeOfLog;
+import system.proxies.User;
+import system.proxies.UserRole;
 import test_crm.proxies.Company;
 import com.mendix.audittrail.tests.actual.ActualLog;
 import com.mendix.audittrail.tests.expected.ExpectedLog;
+import test_crm.proxies.UserTest;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -195,6 +200,34 @@ public class TestAuditInheritance extends TestAuditWithData {
 		// Assert
 		int logsAfter = Core.createXPathQuery(String.format("//%1s", Log.entityName)).execute(context).size();
 		assertEquals("No logs should be added for a rolled back commit", logsBefore, logsAfter);
+	}
+
+	@Test
+	public void testCorrectLogUserForSpecialization() throws CoreException, InterruptedException {
+		// Create a new object that is a specialization of System.User
+		final UserTest userTest = new UserTest(context);
+		// Random name used as there can't be duplicates and database is not cleared between runs
+		userTest.setName("userTest"+ (int) (Math.random() * 1000));
+		userTest.setPassword("TAs4gCFHbc6tRczJAvE8");
+		
+		userTest.commit();
+
+		final ExpectedLog expectedLog = new ExpectedLog(TypeOfLog.Add, UserTest.entityName, admin, initialDate, null)
+				.addAttribute(UserTest.MemberNames.Name, userTest.getName())
+				.addAttribute(UserTest.MemberNames.Password, userTest.getMendixObject().getValue(context, User.MemberNames.Password.toString()))
+				.addAttribute(UserTest.MemberNames.Active, userTest.getActive())
+				.addAttribute(UserTest.MemberNames.IsAnonymous, userTest.getIsAnonymous())
+				.addAttribute(UserTest.MemberNames.BlockedSince, "")
+				.addAttribute(UserTest.MemberNames.Blocked, userTest.getBlocked())
+				.addAttribute(UserTest.MemberNames.LastLogin, "")
+				.addAttribute(UserTest.MemberNames.FailedLogins, userTest.getFailedLogins())
+				.addAttribute(UserTest.MemberNames.WebServiceUser, userTest.getWebServiceUser())
+				.addReferences(UserTest.MemberNames.UserRoles, context, MemberType.ReferenceSet, userTest.getUserRoles().stream().map(UserRole::getMendixObject).toArray(IMendixObject[]::new))
+				.addReferences(UserTest.MemberNames.UserTest_Group, context, MemberType.Reference);
+		
+		final ActualLog actualLog = ActualLog.getLastLog(context, userTest.getMendixObject().getId().toLong());
+		// Expect change author to still be mxAdmin
+		expectedLog.verify(actualLog);
 	}
 
 	private static Date createDate() {
