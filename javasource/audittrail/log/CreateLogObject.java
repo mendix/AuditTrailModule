@@ -92,13 +92,11 @@ public class CreateLogObject {
 		try {
 			userObjectId = context.getSession().getUserId();
 		} catch (final Exception e) {
-			try {
-				final List<IMendixObject> administrators = Core.retrieveXPathQuery(sudoContext, "//" + User.getType() + "["
-						+ User.MemberNames.Name + "='" + Core.getConfiguration().getAdminUserName() + "']");
-				if (administrators.size() > 0) {
-					userObjectId = administrators.get(0).getId();
-				}
-			} catch (final CoreException e1) {
+			final String administratorsQuery = "//" + User.getType() + "[" + User.MemberNames.Name + "='" + Core.getConfiguration().getAdminUserName() + "']";
+			final List<IMendixObject> administrators = Core.createXPathQuery(administratorsQuery).execute(sudoContext);
+			if (administrators.size() > 0) {
+				userObjectId = administrators.get(0).getId();
+			} else {
 				logNode.error("MxAdmin not found");
 			}
 		}

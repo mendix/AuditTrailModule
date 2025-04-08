@@ -38,8 +38,8 @@ public class TestNoAdminAction extends TestAuditInheritance {
 		this.adminLanguage = this.admin.getUser_Language();
 		this.adminTz = this.admin.getUser_TimeZone();
 		
-		List<IMendixObject> sessions = Core.retrieveXPathQuery(this.context,
-			String.format("//System.Session[System.Session_User/System.User/ID='%1$d']", this.admin.getMendixObject().getId().toLong()));
+		String sessionsQuery = String.format("//System.Session[System.Session_User/System.User/ID='%1$d']", this.admin.getMendixObject().getId().toLong());
+		List<IMendixObject> sessions = Core.createXPathQuery(sessionsQuery).execute(this.context);
 		Core.delete(this.context, sessions);
 		this.admin.delete();
 		this.admin = null;

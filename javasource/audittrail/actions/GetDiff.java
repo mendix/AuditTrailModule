@@ -14,8 +14,9 @@ import audittrail.log.diff_match_patch;
 import audittrail.log.diff_match_patch.Diff;
 import com.mendix.systemwideinterfaces.core.IContext;
 import com.mendix.webui.CustomJavaAction;
+import com.mendix.systemwideinterfaces.core.UserAction;
 
-public class GetDiff extends CustomJavaAction<java.lang.String>
+public class GetDiff extends UserAction<java.lang.String>
 {
 	private final java.lang.String OldText;
 	private final java.lang.String NewText;
