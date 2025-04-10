@@ -1,0 +1,1 @@
+We removed usages of deprecated methods in `com.mendix.core.Core` from the implementation that were missed in the previous version
