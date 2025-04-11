@@ -110,7 +110,7 @@ public class CreateLogObject {
 		String association = null;
 
 		// Set the association for the AuditableObject inheriting from superclass
-		if (Core.isSubClassOf(AudittrailSuperClass.getType(), auditableObject.getType())) {
+		if (auditableObject.getMetaObject().isSubClassOf(AudittrailSuperClass.getType())) {
 			logObject.setValue(sudoContext, Log.MemberNames.Log_AudittrailSuperClass.toString(),
 					auditableObject.getId());
 		} else {
@@ -122,13 +122,13 @@ public class CreateLogObject {
 			if (association == null) {
 				final IMetaObject imObject = Core.getMetaObject(auditableObject.getType());
 				for (final IMetaAssociation ass : imObject.getMetaAssociationsParent()) {
-					if (Core.isSubClassOf(Log.getType(), ass.getChild().getId())
+					if (ass.getChild().isSubClassOf(Log.getType())
 							&& ass.getType() == AssociationType.REFERENCESET) {
 						association = ass.getName();
 
 						// Ticket 56528
 						final MendixObjectReferenceSet logReferenceSet = (MendixObjectReferenceSet) auditableObject
-								.getMember(sudoContext, association);
+								.getMember(association);
 						logReferenceSet.addValue(sudoContext, logObject.getId());
 
 						setAssociationName(auditableObject.getType(), association);
@@ -138,7 +138,7 @@ public class CreateLogObject {
 				// If not found, try to look up the child of the association
 				if (association == null) {
 					for (final IMetaAssociation ass : imObject.getMetaAssociationsChild()) {
-						if (Core.isSubClassOf(Log.getType(), ass.getParent().getId())
+						if (ass.getParent().isSubClassOf(Log.getType())
 								&& !ass.getName().equals(Log.MemberNames.Log_User.toString())
 								&& (ass.getType() == AssociationType.REFERENCESET
 										|| ass.getOwner() != AssociationOwner.BOTH)) {
@@ -156,7 +156,7 @@ public class CreateLogObject {
 			else {
 				try {
 					if (auditableObject.hasMember(association)) {
-						((MendixObjectReferenceSet) auditableObject.getMember(context, association))
+						((MendixObjectReferenceSet) auditableObject.getMember(association))
 								.addValue(sudoContext, logObject.getId());
 					} else if (logObject.hasMember(association)) {
 						logObject.setValue(sudoContext, association, auditableObject.getId());
