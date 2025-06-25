@@ -1,31 +1,29 @@
-<!doctype html>
-<html>
-    <head>
-        <meta charset="utf-8">
-        <title>Mendix</title>
-        <meta name="viewport" content="width=device-width, initial-scale=1">
-        {{themecss}}
-        {{appicons}}
-        {{manifest}}
-        {{startupimages}}
-    </head>
-    <body dir="ltr">
-        <noscript>To use this application, please enable JavaScript.</noscript>
-        <div id="content"></div>
-        <script>
-            dojoConfig = {
-                isDebug: false,
-                useCustomLogger: true,
-                async: true,
-                baseUrl: "mxclientsystem/dojo/",
-                cacheBust: "{{cachebust}}",
-                rtlRedirect: "index-rtl.html"
-            };
-        </script>
-        <script>
-            if (!document.cookie || !document.cookie.match(/(^|;)originURI=/gi))
-                document.cookie = "originURI=/login.html" + (window.location.protocol === "https:" ? ";SameSite=None;Secure" : "");
-        </script>
-        <script src="mxclientsystem/mxui/mxui.js?{{cachebust}}"></script>
-    </body>
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    {{unsupportedbrowser}}
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Mendix</title>
+    {{themecss}}
+    {{appicons}}
+    {{manifest}}
+    {{startupimages}}
+  </head>
+
+  <body>
+    <noscript>
+      You need to enable JavaScript to run this app.
+    </noscript>
+    <div id="root"></div>
+    <script src="dist/index.js?{{cachebust}}" type="module"></script>
+    <script>  
+      if (!document.cookie || !document.cookie.match(/(^|;) *originURI=/gi)) {
+        const url = new URL(window.location.href);
+        const subPath = url.pathname.substring(0, url.pathname.lastIndexOf("/"));
+      
+        document.cookie = `originURI=${subPath}/login.html${window.location.protocol === "https:" ? ";SameSite=None;Secure" : ""}`;
+      }
+    </script>
+  </body>
 </html>
