@@ -1,0 +1,2 @@
+We upgraded all widgets to pluggable widgets that use React
+We removed the ability to export to CSV in LogOverviewSnippet due to no support for it in data grid 2. It is still possible to export to Excel
