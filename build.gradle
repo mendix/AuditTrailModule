@@ -32,7 +32,7 @@ repositories {
 dependencies {
     implementation(fileTree(mxRuntimeBundles).include('*.jar'))
     
-    testImplementation('com.mendix.util:junit-helper:1.0.0') {
+    testImplementation('com.mendix.util:junit-helper:1.2.0') {
         exclude group: 'com.mendix', module: 'public-api'
     }
 
