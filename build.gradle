@@ -16,7 +16,7 @@ mxMarketplace {
     appName       = "Audittrail"
     filterWidgets = true
     appDirectory      = "."
-    includeFiles  = List.of(ossClearanceFile)
+    includeFiles  = List.of(ossClearanceFile, licenseFile)
     versionPathPrefix = "__Version " // the path prefix within the module to the version folder
 }
 
