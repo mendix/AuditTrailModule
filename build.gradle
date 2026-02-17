@@ -10,13 +10,13 @@ sourceCompatibility = '11'
 [compileJava, compileTestJava]*.options*.encoding = 'UTF-8'
 
 mxMarketplace {
-    moduleName    = "AuditTrail"
-    moduleLicense = "Apache V2"
-    appNumber     = 138
-    appName       = "Audittrail"
-    filterWidgets = true
+    moduleName        = "AuditTrail"
+    moduleLicense     = "Apache V2"
+    appNumber         = 138
+    appName           = "Audittrail"
+    filterWidgets     = true
     appDirectory      = "."
-    includeFiles  = List.of(ossClearanceFile, licenseFile)
+    includeFiles      = List.of(licenseFile)
     versionPathPrefix = "__Version " // the path prefix within the module to the version folder
 }
 
@@ -75,6 +75,24 @@ release {
 tasks.register('afterReleaseBuildTask') {
     dependsOn 'test'
     dependsOn 'publishModuleToMarketplace'
+}
+
+tasks.register('includeOSSClearance', Zip) {
+    def mpkName = "${mxMarketplace.moduleName}_${version}.mpk"
+    def srcMpkLocation = "${project.rootDir}/${mpkName}"
+    def dstMpkLocation = File.createTempFile("READMEOSS", mpkName)
+
+    archiveFileName = dstMpkLocation.getPath()
+    from zipTree(srcMpkLocation)
+    from ossClearanceFile
+
+    doLast {
+        dstMpkLocation.renameTo(srcMpkLocation)
+    }
+}
+
+publishModuleToMarketplace {
+    dependsOn includeOSSClearance
 }
 
 afterReleaseBuild.dependsOn afterReleaseBuildTask
