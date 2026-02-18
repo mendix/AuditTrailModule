@@ -1,0 +1,1 @@
+We added the LICENSE.txt file which was missing in previous releases.
