@@ -4,6 +4,9 @@ def mxPathDefault = (System.getProperty('os.name').startsWith('Windows'))
 def mxPath = System.getenv('MX_INSTALL_PATH') ?: System.getProperty('MX_INSTALL_PATH') ?: mxPathDefault
 def mxInstallVersion = System.getenv('MODELER_VERSION') ?: System.getenv('MX_INSTALL_VERSION') ?: System.getProperty('MX_INSTALL_VERSION') ?: '10.21.0.64362'
 
+System.out.println("mxInstallVersion = ${mxInstallVersion}")
+
+project.ext.mxInstallVersion = mxInstallVersion
 project.ext.mxInstallPath = "${mxPath}/${mxInstallVersion}"
 project.ext.mxRuntimeBundles = new File("${mxInstallPath}/runtime/bundles")
 project.ext.ossClearanceFile = file("SiemensMendixAudittrail__10.2.1__READMEOSS.html")

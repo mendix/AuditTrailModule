@@ -29,10 +29,13 @@ repositories {
     }
 }
 
+String[] value = project.ext.mxInstallVersion.tokenize(".")
+String junitHelperVersion = (value[0].toInteger() * 100 + value[1].toInteger()) < 1111 ? "1.2.0" : "1.3.0"
+
 dependencies {
     implementation(fileTree(mxRuntimeBundles).include('*.jar'))
-    
-    testImplementation('com.mendix.util:junit-helper:1.2.0') {
+
+    testImplementation('com.mendix.util:junit-helper:' + junitHelperVersion) {
         exclude group: 'com.mendix', module: 'public-api'
     }
 
