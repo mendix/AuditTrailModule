@@ -1,0 +1,1 @@
+We removed the usage of a deprecated method to make the module compatible with future releases of Studio Pro

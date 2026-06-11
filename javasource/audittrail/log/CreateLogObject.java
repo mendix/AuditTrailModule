@@ -84,7 +84,6 @@ public class CreateLogObject {
 					+ auditableObject.getId().toLong() + "), state: " + auditableObject.getState() + "/" + logType);
 
 		final IContext sudoContext = context.createSudoClone();
-		sudoContext.getSession().setTimeZone(getTimeZone(context));
 		final IMendixObject logObject = Core.instantiate(sudoContext, Log.getType());
 
 		IMendixIdentifier userObjectId = null;
@@ -188,13 +187,6 @@ public class CreateLogObject {
 			Core.delete(sudoContext, logObject);
 			return null;
 		}
-	}
-
-	private static String getTimeZone(final IContext context) {
-		final TimeZone tz = context.getSession().getTimeZone();
-		if (tz != null) return tz.getID();
-		if (Constants.getServerTimeZone() == null || Constants.getServerTimeZone().isEmpty()) return "GMT";
-		return Constants.getServerTimeZone();
 	}
 
 	private static int createLogLines(final IMendixObject inputObject, final IMendixObject logObject, final IContext sudoContext,
@@ -476,19 +468,31 @@ public class CreateLogObject {
 		List<String> dateFormats = new LinkedList<String>();
 
 		if (Constants.getLogServerTimeZoneDateNotation()) {
-			dateFormats.add(dateInZone(date, TimeZone.getTimeZone(Constants.getServerTimeZone())));
+			dateFormats.add(dateInZone(date, Constants.getServerTimeZone()));
 		}
 
-		if (Constants.getLogSessionTimeZoneDateNotation() && context.getSession() != null && context.getSession().getTimeZone() != null) {
-			dateFormats.add(dateInZone(date, context.getSession().getTimeZone()));
+		if (Constants.getLogSessionTimeZoneDateNotation()) {
+			dateFormats.add(dateInZone(date, getSessionTimeZone(context)));
 		}
 
 		return dateFormats.stream().collect(Collectors.joining(" / "));
 	}
 
-	private static String dateInZone(final Date date, final TimeZone zone) {
+	private static String getSessionTimeZone(final IContext context) {
+		if (context.getSession() != null && context.getSession().getTimeZone() != null) {
+			return context.getSession().getTimeZone().getID();
+		}
+
+		if (Constants.getServerTimeZone() != null && !Constants.getServerTimeZone().isEmpty()) {
+			return Constants.getServerTimeZone();
+		}
+
+		return "GMT";
+	}
+
+	private static String dateInZone(final Date date, final String zone) {
 		final DateFormat dateFormat = new SimpleDateFormat(Constants.getLogLineDateFormat());
-		dateFormat.setTimeZone(zone);
-		return dateFormat.format(date) + " (" + zone.getID() + ")";
+		dateFormat.setTimeZone(TimeZone.getTimeZone(zone));
+		return dateFormat.format(date) + " (" + zone + ")";
 	}
 }
