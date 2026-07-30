@@ -207,7 +207,7 @@ public class TestAuditInheritance extends TestAuditWithData {
 		// Create a new object that is a specialization of System.User
 		final UserTest userTest = new UserTest(context);
 		// Random name used as there can't be duplicates and database is not cleared between runs
-		userTest.setName("userTest"+ (int) (Math.random() * 1000));
+		userTest.setName("userTest"+ (int) (Math.random() * 1.0e9));
 		userTest.setPassword("TAs4gCFHbc6tRczJAvE8");
 		
 		userTest.commit();
