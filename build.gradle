@@ -6,7 +6,9 @@ plugins {
 
 apply from: 'environment.gradle'
 
-sourceCompatibility = '11'
+java {
+    sourceCompatibility = '11'
+}
 [compileJava, compileTestJava]*.options*.encoding = 'UTF-8'
 
 mxMarketplace {
