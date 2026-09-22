@@ -1,0 +1,1 @@
+We increased the length of the Member field to accommodate for long association names.
